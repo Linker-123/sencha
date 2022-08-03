@@ -27,6 +27,7 @@ impl Context {
         self.sections.push(sec);
     }
 
+    #[allow(dead_code)]
     pub fn add_constant(&mut self, constant: Ins) {
         self.constants.push(constant);
     }

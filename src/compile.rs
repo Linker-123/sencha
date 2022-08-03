@@ -1,5 +1,4 @@
 use crate::asm::{Assemble, Context};
-use std::path::Path;
 use std::process::Command;
 use std::{
     fs::{self, OpenOptions},
@@ -18,7 +17,7 @@ pub fn compile_ctx(context: Context) -> Result<(), Error> {
 
     Command::new("nasm")
         .arg("-felf64")
-        .arg(fs::canonicalize(&Path::new("./build/source.nasm").as_os_str()).unwrap())
+        .arg("./build/source.nasm")
         .arg("-o ./build/source.o")
         .spawn()
         .unwrap()
