@@ -6,7 +6,20 @@ pub enum TokenKind {
     RightParen(usize, usize),
     NumLiteral(String, usize, usize),
     StrLiteral(String, usize, usize),
-    // IdenLiteral(String, usize, usize),
+    IdenLiteral(String, usize, usize),
+    Func(usize, usize),
+    Mod(usize, usize),
+    Use(usize, usize),
+    Ret(usize, usize),
+    Arrow(usize, usize),
+    Colon(usize, usize),
+    ColonEq(usize, usize),
+    Comma(usize, usize),
+    Dot(usize, usize),
+    Plus(usize, usize),
+    Minus(usize, usize),
+    Star(usize, usize),
+    Slash(usize, usize),
 }
 
 fn is_digit(c: char) -> bool {
@@ -16,6 +29,17 @@ fn is_digit(c: char) -> bool {
 fn is_digit_opt(c: Option<char>) -> bool {
     if let Some(c) = c {
         return c >= '0' && c <= '9';
+    }
+    false
+}
+
+fn is_alpha(c: char) -> bool {
+    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'
+}
+
+fn is_alpha_opt(c: Option<char>) -> bool {
+    if let Some(c) = c {
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
     }
     false
 }
@@ -53,22 +77,22 @@ impl<'a> Tokenizer<'a> {
         self.source.chars().nth(self.current - 1)
     }
 
-    // fn consume(&mut self, expected: char) -> bool {
-    //     if self.is_at_end() {
-    //         return false;
-    //     }
+    fn matches(&mut self, expected: char) -> bool {
+        if self.is_at_end() {
+            return false;
+        }
 
-    //     let c = self.source.chars().nth(self.current);
-    //     if let Some(c) = c {
-    //         if c != expected {
-    //             return false;
-    //         }
-    //     }
+        let c = self.source.chars().nth(self.current);
+        if let Some(c) = c {
+            if c != expected {
+                return false;
+            }
+        }
 
-    //     self.current += 1;
-    //     self.column += 1;
-    //     true
-    // }
+        self.current += 1;
+        self.column += 1;
+        true
+    }
 
     fn peek(&mut self) -> Option<char> {
         self.source.chars().nth(self.current)
@@ -155,6 +179,28 @@ impl<'a> Tokenizer<'a> {
             self.column,
         );
     }
+
+    fn identifier(&mut self) -> TokenKind {
+        while is_alpha_opt(self.peek()) || is_digit_opt(self.peek()) {
+            self.advance();
+        }
+
+        let identifier = self
+            .source
+            .chars()
+            .skip(self.start)
+            .take(self.current - self.start)
+            .collect::<String>();
+        match identifier.as_str() {
+            "func" => return TokenKind::Func(self.line, self.column),
+            "mod" => return TokenKind::Mod(self.line, self.column),
+            "use" => return TokenKind::Use(self.line, self.column),
+            "ret" => return TokenKind::Ret(self.line, self.column),
+            _ => (),
+        }
+
+        TokenKind::IdenLiteral(identifier, self.line, self.column)
+    }
 }
 
 impl<'a> Iterator for Tokenizer<'a> {
@@ -172,6 +218,9 @@ impl<'a> Iterator for Tokenizer<'a> {
             None => return None,
         };
 
+        if is_alpha(c) {
+            return Some(self.identifier());
+        }
         if is_digit(c) {
             return Some(self.number());
         }
@@ -181,6 +230,21 @@ impl<'a> Iterator for Tokenizer<'a> {
             ')' => Some(TokenKind::RightParen(self.line, self.current)),
             '{' => Some(TokenKind::LeftBrace(self.line, self.current)),
             '}' => Some(TokenKind::RightBrace(self.line, self.current)),
+            ':' => Some(if self.matches('=') {
+                TokenKind::ColonEq(self.line, self.current)
+            } else {
+                TokenKind::Colon(self.line, self.current)
+            }),
+            '.' => Some(TokenKind::Dot(self.line, self.current)),
+            ',' => Some(TokenKind::Comma(self.line, self.current)),
+            '+' => Some(TokenKind::Plus(self.line, self.current)),
+            '-' => Some(if self.matches('>') {
+                TokenKind::Arrow(self.line, self.current)
+            } else {
+                TokenKind::Minus(self.line, self.current)
+            }),
+            '*' => Some(TokenKind::Star(self.line, self.current)),
+            '/' => Some(TokenKind::Slash(self.line, self.current)),
             '"' => Some(self.string()),
             _ => None,
         }
