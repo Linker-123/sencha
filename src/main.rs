@@ -22,8 +22,8 @@ fn main() {
     text.add_instruction(Ins::Label(
         "main".to_string(),
         vec![
-            Ins::Inline(Op::Mov, vec![Tgt::Rax, Tgt::Value("9007199254740991")]),
-            Ins::Inline(Op::Mov, vec![Tgt::Rbx, Tgt::Value("9007199254740991")]),
+            Ins::Inline(Op::Mov, vec![Tgt::Rax, Tgt::Value("9007199254740991279")]),
+            Ins::Inline(Op::Mov, vec![Tgt::Rbx, Tgt::Value("9007199254740991279")]),
             Ins::Inline(Op::Add, vec![Tgt::Rax, Tgt::Rbx]),
             Ins::Inline(Op::Mov, vec![Tgt::Vars("sum"), Tgt::Rax]),
             Ins::Inline(Op::Mov, vec![Tgt::Rsi, Tgt::Vars("sum")]),
