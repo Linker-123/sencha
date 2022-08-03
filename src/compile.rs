@@ -19,25 +19,17 @@ pub fn compile_ctx(context: Context) -> Result<(), Error> {
         .arg("-felf64")
         .arg("./build/source.nasm")
         .arg("-o ./build/source.o")
-        .spawn()
-        .unwrap()
-        .wait()
-        .unwrap();
+        .spawn()?
+        .wait()?;
     Command::new("gcc")
         .arg("-no-pie")
         .arg("-m64")
         .arg("-osource.out")
         .arg("./source.o")
         .current_dir("./build")
-        .spawn()
-        .unwrap()
-        .wait()
-        .unwrap();
-    Command::new("./build/source.out")
-        .spawn()
-        .unwrap()
-        .wait()
-        .unwrap();
+        .spawn()?
+        .wait()?;
+    Command::new("./build/source.out").spawn()?.wait()?;
 
     Ok(())
 }
