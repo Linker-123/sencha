@@ -1,5 +1,5 @@
 use crate::asm::{Assemble, Context};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 use std::{
     fs::{self, OpenOptions},
@@ -34,7 +34,11 @@ pub fn compile_ctx(context: Context) -> Result<(), Error> {
         .unwrap()
         .wait()
         .unwrap();
-    Command::new("./build/source.out").spawn().unwrap().wait().unwrap();
+    Command::new("./build/source.out")
+        .spawn()
+        .unwrap()
+        .wait()
+        .unwrap();
 
     Ok(())
 }

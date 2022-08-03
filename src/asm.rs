@@ -87,6 +87,7 @@ pub enum SectionKind {
     Text,
 }
 
+#[allow(dead_code)]
 pub enum Ins {
     /// Define a constant. Args: name, value
     Constant(String, String),
@@ -148,6 +149,7 @@ impl Assemble for Ins {
     }
 }
 
+#[allow(dead_code)]
 pub enum DataKind {
     /// 8 bits
     Byte,
@@ -184,6 +186,7 @@ impl Assemble for DataKind {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum Tgt {
     // full 64-bit registers
     Rax,
@@ -277,6 +280,7 @@ impl Assemble for Tgt {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum Op {
     Mov,
     Call,
