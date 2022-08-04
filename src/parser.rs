@@ -77,17 +77,20 @@ impl<'a> Parser<'a> {
 
     fn unary(&mut self) -> Box<Node> {
         let mut uop = UnaryOp::None;
+        let mut loc = (0, 0);
 
         if matches!(self, self.current, TokenKind::Bang(_, _)) {
             uop = UnaryOp::Not;
-        }
-        if matches!(self, self.current, TokenKind::Minus(_, _)) {
+            loc = get_tok_loc(&self.current);
+        } else if matches!(self, self.current, TokenKind::Minus(_, _)) {
             uop = UnaryOp::Negate;
+            loc = get_tok_loc(&self.current);
         }
 
         if uop != UnaryOp::None {
             let expr = self.unary();
-            return Unary::new(uop, get_tok_loc(&self.current), expr);
+            println!("Current: {:#?}", self.current);
+            return Unary::new(uop, loc, expr);
         }
 
         self.primary()

@@ -55,7 +55,7 @@ pub fn get_tok_loc(token: &TokenKind) -> (usize, usize) {
         TokenKind::False(a, b) => (*a, *b),
         TokenKind::Bang(a, b) => (*a, *b),
         TokenKind::NewLine(a, b) => (*a, *b),
-        _ => panic!("Unsupported token"),
+        TokenKind::Eof => panic!("Unsupported token"),
     }
 }
 

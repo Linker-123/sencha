@@ -8,7 +8,7 @@ mod parser;
 mod tokenizer;
 
 fn main() {
-    let source = "-2*3".to_string();
+    let source = "-2.4*!3.1".to_string();
     let tokenizer = Tokenizer::new(&source);
     let mut parser = Parser::new(tokenizer);
 
