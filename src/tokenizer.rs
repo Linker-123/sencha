@@ -1,10 +1,11 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TokenKind {
     LeftBrace(usize, usize),
     RightBrace(usize, usize),
     LeftParen(usize, usize),
     RightParen(usize, usize),
-    NumLiteral(String, usize, usize),
+    IntLiteral(String, usize, usize),
+    FloatLiteral(String, usize, usize),
     StrLiteral(String, usize, usize),
     IdenLiteral(String, usize, usize),
     Func(usize, usize),
@@ -20,7 +21,42 @@ pub enum TokenKind {
     Minus(usize, usize),
     Star(usize, usize),
     Slash(usize, usize),
-    Eof
+    True(usize, usize),
+    False(usize, usize),
+    Bang(usize, usize),
+    NewLine(usize, usize),
+    Eof,
+}
+
+pub fn get_tok_loc(token: &TokenKind) -> (usize, usize) {
+    match token {
+        TokenKind::LeftBrace(a, b) => (*a, *b),
+        TokenKind::RightBrace(a, b) => (*a, *b),
+        TokenKind::LeftParen(a, b) => (*a, *b),
+        TokenKind::RightParen(a, b) => (*a, *b),
+        TokenKind::IntLiteral(_, a, b) => (*a, *b),
+        TokenKind::FloatLiteral(_, a, b) => (*a, *b),
+        TokenKind::StrLiteral(_, a, b) => (*a, *b),
+        TokenKind::IdenLiteral(_, a, b) => (*a, *b),
+        TokenKind::Func(a, b) => (*a, *b),
+        TokenKind::Mod(a, b) => (*a, *b),
+        TokenKind::Use(a, b) => (*a, *b),
+        TokenKind::Ret(a, b) => (*a, *b),
+        TokenKind::Arrow(a, b) => (*a, *b),
+        TokenKind::Colon(a, b) => (*a, *b),
+        TokenKind::ColonEq(a, b) => (*a, *b),
+        TokenKind::Comma(a, b) => (*a, *b),
+        TokenKind::Dot(a, b) => (*a, *b),
+        TokenKind::Plus(a, b) => (*a, *b),
+        TokenKind::Minus(a, b) => (*a, *b),
+        TokenKind::Star(a, b) => (*a, *b),
+        TokenKind::Slash(a, b) => (*a, *b),
+        TokenKind::True(a, b) => (*a, *b),
+        TokenKind::False(a, b) => (*a, *b),
+        TokenKind::Bang(a, b) => (*a, *b),
+        TokenKind::NewLine(a, b) => (*a, *b),
+        _ => panic!("Unsupported token"),
+    }
 }
 
 fn is_digit(c: char) -> bool {
@@ -116,11 +152,6 @@ impl<'a> Tokenizer<'a> {
                 ' ' | '\r' | '\t' => {
                     self.advance();
                 }
-                '\n' => {
-                    self.line += 1;
-                    self.column = 0;
-                    self.advance();
-                }
                 '/' => {
                     if self.peek_next() == Some('/') {
                         while self.peek() != Some('\n') && !self.is_at_end() {
@@ -163,22 +194,26 @@ impl<'a> Tokenizer<'a> {
             self.advance();
         }
 
+        let mut is_float = false;
         if self.peek() == Some('.') && is_digit_opt(self.peek_next()) {
             self.advance();
             while is_digit_opt(self.peek()) {
                 self.advance();
             }
+            is_float = true;
         }
 
-        return TokenKind::NumLiteral(
-            self.source
-                .chars()
-                .skip(self.start)
-                .take(self.current - self.start)
-                .collect(),
-            self.line,
-            self.column,
-        );
+        let raw = self
+            .source
+            .chars()
+            .skip(self.start)
+            .take(self.current - self.start)
+            .collect();
+        if is_float {
+            TokenKind::FloatLiteral(raw, self.line, self.column)
+        } else {
+            TokenKind::IntLiteral(raw, self.line, self.column)
+        }
     }
 
     fn identifier(&mut self) -> TokenKind {
@@ -197,6 +232,8 @@ impl<'a> Tokenizer<'a> {
             "mod" => return TokenKind::Mod(self.line, self.column),
             "use" => return TokenKind::Use(self.line, self.column),
             "ret" => return TokenKind::Ret(self.line, self.column),
+            "true" => return TokenKind::True(self.line, self.column),
+            "false" => return TokenKind::False(self.line, self.column),
             _ => (),
         }
 
@@ -227,26 +264,32 @@ impl<'a> Iterator for Tokenizer<'a> {
         }
 
         match c {
-            '(' => Some(TokenKind::LeftParen(self.line, self.current)),
-            ')' => Some(TokenKind::RightParen(self.line, self.current)),
-            '{' => Some(TokenKind::LeftBrace(self.line, self.current)),
-            '}' => Some(TokenKind::RightBrace(self.line, self.current)),
+            '(' => Some(TokenKind::LeftParen(self.line, self.column)),
+            ')' => Some(TokenKind::RightParen(self.line, self.column)),
+            '{' => Some(TokenKind::LeftBrace(self.line, self.column)),
+            '}' => Some(TokenKind::RightBrace(self.line, self.column)),
             ':' => Some(if self.matches('=') {
-                TokenKind::ColonEq(self.line, self.current)
+                TokenKind::ColonEq(self.line, self.column)
             } else {
-                TokenKind::Colon(self.line, self.current)
+                TokenKind::Colon(self.line, self.column)
             }),
-            '.' => Some(TokenKind::Dot(self.line, self.current)),
-            ',' => Some(TokenKind::Comma(self.line, self.current)),
-            '+' => Some(TokenKind::Plus(self.line, self.current)),
+            '.' => Some(TokenKind::Dot(self.line, self.column)),
+            ',' => Some(TokenKind::Comma(self.line, self.column)),
+            '+' => Some(TokenKind::Plus(self.line, self.column)),
             '-' => Some(if self.matches('>') {
-                TokenKind::Arrow(self.line, self.current)
+                TokenKind::Arrow(self.line, self.column)
             } else {
-                TokenKind::Minus(self.line, self.current)
+                TokenKind::Minus(self.line, self.column)
             }),
-            '*' => Some(TokenKind::Star(self.line, self.current)),
-            '/' => Some(TokenKind::Slash(self.line, self.current)),
+            '*' => Some(TokenKind::Star(self.line, self.column)),
+            '/' => Some(TokenKind::Slash(self.line, self.column)),
             '"' => Some(self.string()),
+            '!' => Some(TokenKind::Bang(self.line, self.column)),
+            '\n' => {
+                self.line += 1;
+                self.column = 0;
+                Some(TokenKind::NewLine(self.line, self.column))
+            }
             _ => None,
         }
     }

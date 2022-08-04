@@ -37,7 +37,7 @@ expression              =   assignment;
 assignment              =   [ call, "." ], identifier, "=", assignment | logical_or;
 logical_or              =   { logical_and, ( "or", logical_and ) };
 logical_and             =   { equality, ( "and", equality ) };
-equality                =   { comparison, ( ( ">" | ">=" | "<" | "<=" ), comparison ) };
+equality                =   { comparison, ( ( "==" | "!=" ), comparison ) };
 comparison              =   { term, ( ( ">" | ">=" | "<" | "<=" ), term ) };
 term                    =   { factor, ( ( "-" | "+" ), factor ) };
 factor                  =   { unary, ( ( "/" | "*" ), unary ) };
