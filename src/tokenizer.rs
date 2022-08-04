@@ -20,6 +20,7 @@ pub enum TokenKind {
     Minus(usize, usize),
     Star(usize, usize),
     Slash(usize, usize),
+    Eof
 }
 
 fn is_digit(c: char) -> bool {

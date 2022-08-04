@@ -1,0 +1,47 @@
+digit                   =   "0" | "1" | "2" | "3" | "4" | "5" | "6"
+                            | "7" | "8" | "9";
+letter                  =   "A" | "B" | "C" | "D" | "E" | "F" | "G"
+                            | "H" | "I" | "J" | "K" | "L" | "M" | "N"
+                            | "O" | "P" | "Q" | "R" | "S" | "T" | "U"
+                            | "V" | "W" | "X" | "Y" | "Z" | "a" | "b"
+                            | "c" | "d" | "e" | "f" | "g" | "h" | "i"
+                            | "j" | "k" | "l" | "m" | "n" | "o" | "p"
+                            | "q" | "r" | "s" | "t" | "u" | "v" | "w"
+                            | "x" | "y" | "z";
+integer                 =   ["-"], { digit };
+float                   =   integer, ".", integer;
+ichar excluding digit   =   letter | "_";
+ichar                   =   ichar excluding digit | digit;
+identifier              =   ichar excluding zero, { ichar };
+
+char                    =   { unicode char };
+string                  =   '"', { char }, '"';
+
+typed_arg               =   identifier, ":", identifier;
+declaration             =   func_decl | mod_decl | var_decl;
+func_decl               =   "func", identifier, [ "(", typed_arg, { ",", typed_arg }, ")" ];
+mod_decl                =   "mod", identifier, "{", { declaration }, "}";
+var_decl                =   identifier, ":=", expression, "\n";
+
+statement               =   expr_stmt | for_stmt | if_stmt | use_stmt | ret_stmt | block;
+
+expr_stmt               =   expression, "\n";
+for_stmt                =   "for", identifier, "in" identifier, block;
+if_stmt                 =   "if", expression, statement, [ "else", statement ];
+use_stmt                =   "use", identifier, { ".", identifier };
+ret_stmt                =   "ret", [expression];
+block                   =   "{", { declaration }, "}";
+
+arguments               =   expression, { "," expression } 
+expression              =   assignment;
+assignment              =   [ call, "." ], identifier, "=", assignment | logical_or;
+logical_or              =   { logical_and, ( "or", logical_and ) };
+logical_and             =   { equality, ( "and", equality ) };
+equality                =   { comparison, ( ( ">" | ">=" | "<" | "<=" ), comparison ) };
+comparison              =   { term, ( ( ">" | ">=" | "<" | "<=" ), term ) };
+term                    =   { factor, ( ( "-" | "+" ), factor ) };
+factor                  =   { unary, ( ( "/" | "*" ), unary ) };
+unary                   =   ( "!" | "-" ), unary | call;
+call                    =   primary, ( "(", arguments, ")" | "." identifier) ;
+primary                 =   "true" | "false" | "self" | identifier | string | integer | float 
+                            | "(", expression, ")";

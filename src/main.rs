@@ -1,6 +1,7 @@
 use tokenizer::Tokenizer;
 
 mod asm;
+mod ast;
 mod compile;
 mod tokenizer;
 
@@ -20,7 +21,7 @@ fn main() {
     }"
     .to_string();
     let tokenizer = Tokenizer::new(&source);
-    for tok in tokenizer.into_iter() {
+    for tok in tokenizer {
         println!("Token: {:#?}", tok);
     }
 }
