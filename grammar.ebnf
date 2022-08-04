@@ -28,8 +28,8 @@ statement               =   expr_stmt | for_stmt | if_stmt | use_stmt | ret_stmt
 expr_stmt               =   expression, "\n";
 for_stmt                =   "for", identifier, "in" identifier, block;
 if_stmt                 =   "if", expression, statement, [ "else", statement ];
-use_stmt                =   "use", identifier, { ".", identifier };
-ret_stmt                =   "ret", [expression];
+use_stmt                =   "use", identifier, { ".", identifier }, "\n";
+ret_stmt                =   "ret", [expression], "\n";
 block                   =   "{", { declaration }, "}";
 
 arguments               =   expression, { "," expression } 
