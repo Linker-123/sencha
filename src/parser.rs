@@ -111,6 +111,9 @@ impl<'a> Parser<'a> {
         if matches!(self, self.current, TokenKind::Func(_, _)) {
             return Ok(Some(self.func_decl()?));
         }
+        if matches!(self, self.current, TokenKind::Var(_, _)) {
+            return Ok(Some(self.explicit_var_decl()?));
+        }
         if std::matches!(self.current, TokenKind::IdenLiteral(_, _, _))
             && std::matches!(self.tokenizer.peek_ahead(), Some(TokenKind::ColonEq(_, _)))
         {
@@ -148,6 +151,34 @@ impl<'a> Parser<'a> {
         Ok(Some(stmt))
     }
 
+    fn explicit_var_decl(&mut self) -> ParseResult<Box<Node>> {
+        let name;
+        let name_loc;
+
+        if let TokenKind::IdenLiteral(n, line, column) = &self.current {
+            name = n.clone();
+            name_loc = (*line, *column);
+        } else {
+            return Err(self.error("expected an identifier", &self.current));
+        }
+
+        self.advance();
+        consume!(self, "expected ':'", self.current, TokenKind::Colon(_, _));
+
+        let dtype;
+        if let TokenKind::IdenLiteral(t, _, _) = &self.current {
+            dtype = t.clone();
+        } else {
+            return Err(self.error("expected an identifier", &self.current));
+        }
+
+        self.advance();
+        consume!(self, "expected '='", self.current, TokenKind::Equal(_, _));
+
+        let value = self.expr()?;
+        Ok(VarDecl::new(name, name_loc, Some(dtype), value))
+    }
+
     fn implicit_var_decl(&mut self) -> ParseResult<Box<Node>> {
         let name;
         let name_loc;
@@ -160,7 +191,12 @@ impl<'a> Parser<'a> {
         }
 
         self.advance();
-        self.advance(); // advance through the :=
+        consume!(
+            self,
+            "expected ':='",
+            self.current,
+            TokenKind::ColonEq(_, _)
+        );
         let value = self.expr()?;
 
         Ok(VarDecl::new(name, name_loc, None, value))
@@ -491,14 +527,12 @@ impl<'a> Parser<'a> {
         let node = match &self.current {
             TokenKind::True(line, column) => Node::BoolLiteral(true, *line, *column),
             TokenKind::False(line, column) => Node::BoolLiteral(false, *line, *column),
-            TokenKind::IntLiteral(integer, line, column) => match integer.parse::<i32>() {
-                Ok(n) => Node::Signed32(n, *line, *column),
-                Err(_) => return Err(self.error("couldn't parse an i32", &self.current)),
-            },
-            TokenKind::FloatLiteral(float, line, column) => match float.parse::<f64>() {
-                Ok(n) => Node::F64(n, *line, *column),
-                Err(_) => return Err(self.error("couldn't parse an f64", &self.current)),
-            },
+            TokenKind::IntLiteral(integer, line, column) => {
+                Node::Number(integer.clone(), *line, *column)
+            }
+            TokenKind::FloatLiteral(float, line, column) => {
+                Node::Float(float.clone(), *line, *column)
+            }
             TokenKind::StrLiteral(string, line, column) => {
                 Node::StringLiteral(string.clone(), *line, *column)
             }

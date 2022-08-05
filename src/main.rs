@@ -11,6 +11,7 @@ fn main() {
     let source = "func main(a: u32, b: u32) -> u32 {
         x := 3
         z := \"Test\"
+        var x: u128 = 123891123;
     }
     "
     .to_string();

@@ -17,18 +17,8 @@ impl FunctionArg {
 
 #[derive(Debug)]
 pub enum Node {
-    Signed8(i8, usize, usize),
-    Signed16(i16, usize, usize),
-    Signed32(i32, usize, usize),
-    Signed64(i64, usize, usize),
-    Signed128(i128, usize, usize),
-    Unsigned8(u8, usize, usize),
-    Unsigned16(u16, usize, usize),
-    Unsigned32(u32, usize, usize),
-    Unsigned64(u64, usize, usize),
-    Unsigned128(u128, usize, usize),
-    F32(f32, usize, usize),
-    F64(f64, usize, usize),
+    Number(String, usize, usize),
+    Float(String, usize, usize),
     StringLiteral(String, usize, usize),
     BoolLiteral(bool, usize, usize),
     VarGet(String, usize, usize),
