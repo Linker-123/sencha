@@ -69,9 +69,9 @@ pub enum UnaryOp {
 
 #[derive(Debug)]
 pub struct Binary {
-    lhs: Box<Node>,
-    rhs: Box<Node>,
-    op: BinaryOp,
+    pub lhs: Box<Node>,
+    pub rhs: Box<Node>,
+    pub op: BinaryOp,
 }
 
 impl Binary {

@@ -1,17 +1,21 @@
+extern crate lazy_static;
+
 use parser::Parser;
 use tokenizer::Tokenizer;
+
+use crate::typecheck::TypeContainer;
 
 mod asm;
 mod ast;
 mod compile;
 mod parser;
 mod tokenizer;
+mod typecheck;
 
 fn main() {
-    let source = "func main(a: u32, b: u32) -> u32 {
-        x := 3
-        z := \"Test\"
-        var x: u128 = 123891123;
+    let source = "
+    func main {
+        z := 5 || 7.3
     }
     "
     .to_string();
@@ -19,5 +23,8 @@ fn main() {
     let mut parser = Parser::new(tokenizer, &source);
     parser.parse();
 
-    println!("{:#?}", parser.declarations);
+    let mut checker = TypeContainer::new();
+    for decl in &parser.declarations {
+        checker.check(decl);
+    }
 }
