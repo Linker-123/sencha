@@ -2,7 +2,6 @@ extern crate lazy_static;
 
 use parser::Parser;
 use tokenizer::Tokenizer;
-
 use crate::typecheck::TypeContainer;
 
 mod asm;
@@ -15,7 +14,7 @@ mod typecheck;
 fn main() {
     let source = "
     func main(a: i32, b: i32, c: i32) -> i32 {
-        apple_count := 21
+        apple_count := \"Abra Kadabra\"
     }
     "
     .to_string();

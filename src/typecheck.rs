@@ -75,6 +75,10 @@ impl TypeContainer {
                 *size = tipe.size;
                 tipe
             }
+            Node::StringLiteral(literal, _, _) => {
+                self.create_type(Type::new("str".to_string(), literal.len()));
+                self.resolve_type(&"str".to_string())
+            }
             Node::VarGet(name, _, _) => self.resolve_local(name),
             Node::Binary(binary) => {
                 let l_type = self.check(&mut binary.lhs);
