@@ -162,9 +162,7 @@ impl<'a> Parser<'a> {
             TokenKind::True(line, column) => Node::BoolLiteral(true, line, column),
             TokenKind::False(line, column) => Node::BoolLiteral(false, line, column),
             TokenKind::IntLiteral(integer, line, column) => match integer.parse::<i32>() {
-                Ok(n) => {
-                    Node::Signed32(n, line, column)
-                }
+                Ok(n) => Node::Signed32(n, line, column),
                 Err(e) => panic!("Couldn't parse i32 {} at {}:{}", e, line, column),
             },
             TokenKind::FloatLiteral(float, line, column) => match float.parse::<f64>() {
