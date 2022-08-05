@@ -85,7 +85,7 @@ pub struct Function {
     pub name: String,
     pub loc: (usize, usize),
     pub args: Vec<FunctionArg>,
-    pub body: Vec<Box<Node>>,
+    pub body: Box<Node>,
     pub ret_type: Option<String>,
 }
 
@@ -94,7 +94,7 @@ impl Function {
         name: String,
         loc: (usize, usize),
         args: Vec<FunctionArg>,
-        body: Vec<Box<Node>>,
+        body: Box<Node>,
         ret_type: Option<String>,
     ) -> Box<Node> {
         Box::new(Node::Function(Function {

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::ast::{Node, UnaryOp};
+use crate::ast::{BinaryOp, Node, UnaryOp};
 
 #[derive(PartialEq, Clone)]
 pub struct Type {
@@ -72,15 +72,18 @@ impl TypeContainer {
                     panic!("Binary expression has invalid operands");
                 }
 
-                l_type
+                match binary.op {
+                    BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div => l_type,
+                    BinaryOp::Greater
+                    | BinaryOp::GreaterEq
+                    | BinaryOp::Less
+                    | BinaryOp::LessEq
+                    | BinaryOp::Equal
+                    | BinaryOp::NotEqual => self.resolve_type(&"bool".to_string()),
+                    _ => unreachable!(),
+                }
             }
             Node::Function(func) => {
-                let mut old_locals = vec![];
-                if let Some(locals) = self.created_locals.take() {
-                    old_locals = locals;
-                }
-
-                self.created_locals = Some(vec![]);
                 let ret_type = match &func.ret_type {
                     Some(str) => str.clone(),
                     None => "void".to_string(),
@@ -94,22 +97,12 @@ impl TypeContainer {
                     self.locals.insert(arg.name.clone(), arg_type);
                 }
 
-                for node in &func.body {
-                    self.check(node);
-                }
+                self.check(&func.body);
 
                 self.locals.remove(&func.name);
                 for arg in &func.args {
                     self.locals.remove(&arg.name);
                 }
-
-                if let Some(locals) = &self.created_locals {
-                    for local in locals {
-                        self.locals.remove(local);
-                    }
-                }
-
-                self.created_locals = Some(old_locals);
 
                 tipe
             }
@@ -158,7 +151,41 @@ impl TypeContainer {
 
                 local
             }
-            
+            Node::ExprStmt(expr_stmt) => self.check(&expr_stmt.expr),
+            Node::Block(block) => {
+                let mut old_locals = vec![];
+                if let Some(locals) = self.created_locals.take() {
+                    old_locals = locals;
+                }
+                self.created_locals = Some(vec![]);
+
+                for node in &block.statements {
+                    self.check(&node);
+                }
+
+                if let Some(locals) = &self.created_locals {
+                    for local in locals {
+                        self.locals.remove(local);
+                    }
+                }
+
+                self.created_locals = Some(old_locals);
+                self.resolve_type(&"void".to_string())
+            }
+            Node::If(if_stmt) => {
+                let cond_type = self.check(&if_stmt.condition);
+                if cond_type != self.resolve_type(&"bool".to_string()) {
+                    panic!("If condition doesn't evaluate to a bool");
+                }
+
+                self.check(&if_stmt.then_block);
+
+                if let Some(else_block) = &if_stmt.else_block {
+                    self.check(else_block);
+                }
+
+                self.resolve_type(&"void".to_string())
+            }
             _ => todo!(),
         }
     }

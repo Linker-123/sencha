@@ -272,7 +272,13 @@ impl<'a> Parser<'a> {
         );
 
         let body = self.block()?;
-        Ok(Function::new(name, name_loc, args, body, ret_type))
+        Ok(Function::new(
+            name,
+            name_loc,
+            args,
+            Block::new(body),
+            ret_type,
+        ))
     }
 
     fn if_stmt(&mut self) -> ParseResult<Box<Node>> {
@@ -327,14 +333,13 @@ impl<'a> Parser<'a> {
 
         consume!(self, "expected 'in'", self.current, TokenKind::In(_, _));
         let target = self.expr()?;
-        {
-            consume!(
-                self,
-                "expected a '{'",
-                self.current,
-                TokenKind::LeftBrace(_, _)
-            );
-        }
+
+        consume!(
+            self,
+            "expected a '{'",
+            self.current,
+            TokenKind::LeftBrace(_, _)
+        );
         let body = self.block()?;
         Ok(For::new(name, name_loc, target, Block::new(body)))
     }
