@@ -3,14 +3,23 @@ use std::collections::HashMap;
 use crate::ast::{BinaryOp, Node, UnaryOp};
 
 #[derive(PartialEq, Clone)]
+pub enum TypeKind {
+    Numeric,
+    Bool,
+    Textual,
+    None,
+}
+
+#[derive(PartialEq, Clone)]
 pub struct Type {
     pub name: String,
     pub size: usize,
+    pub kind: TypeKind,
 }
 
 impl Type {
-    pub fn new(name: String, size: usize) -> Type {
-        Type { name, size }
+    pub fn new(name: String, size: usize, kind: TypeKind) -> Type {
+        Type { name, size, kind }
     }
 }
 
@@ -31,10 +40,18 @@ impl TypeContainer {
             created_locals: None,
         };
 
-        container.create_type(Type::new("i32".to_string(), 4));
-        container.create_type(Type::new("f64".to_string(), 8));
-        container.create_type(Type::new("bool".to_string(), 1));
-        container.create_type(Type::new("void".to_string(), 0));
+        container.create_type(Type::new("i8".to_string(), 1, TypeKind::Numeric));
+        container.create_type(Type::new("u8".to_string(), 1, TypeKind::Numeric));
+        container.create_type(Type::new("i16".to_string(), 2, TypeKind::Numeric));
+        container.create_type(Type::new("u16".to_string(), 2, TypeKind::Numeric));
+        container.create_type(Type::new("i32".to_string(), 4, TypeKind::Numeric));
+        container.create_type(Type::new("u32".to_string(), 4, TypeKind::Numeric));
+        container.create_type(Type::new("f32".to_string(), 4, TypeKind::Numeric));
+        container.create_type(Type::new("i64".to_string(), 8, TypeKind::Numeric));
+        container.create_type(Type::new("u64".to_string(), 8, TypeKind::Numeric));
+        container.create_type(Type::new("f64".to_string(), 8, TypeKind::Numeric));
+        container.create_type(Type::new("bool".to_string(), 1, TypeKind::Bool));
+        container.create_type(Type::new("void".to_string(), 0, TypeKind::None));
         container
     }
 
@@ -76,7 +93,11 @@ impl TypeContainer {
                 tipe
             }
             Node::StringLiteral(literal, _, _) => {
-                self.create_type(Type::new("str".to_string(), literal.len()));
+                self.create_type(Type::new(
+                    "str".to_string(),
+                    literal.len(),
+                    TypeKind::Textual,
+                ));
                 self.resolve_type(&"str".to_string())
             }
             Node::VarGet(name, _, _) => self.resolve_local(name),
@@ -89,7 +110,13 @@ impl TypeContainer {
                 }
 
                 match binary.op {
-                    BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div => l_type,
+                    BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div => {
+                        match l_type.kind {
+                            TypeKind::Numeric => (),
+                            _ => panic!("Cannot do arithmetic on non-numeric types"),
+                        }
+                        l_type
+                    }
                     BinaryOp::Greater
                     | BinaryOp::GreaterEq
                     | BinaryOp::Less
@@ -134,7 +161,7 @@ impl TypeContainer {
                 if let Some(ex_dt) = &decl.dtype {
                     let ex_type = self.resolve_type(ex_dt);
 
-                    if ex_type != val_type {
+                    if ex_type.kind != val_type.kind {
                         panic!("Explicit variable type, doesn't equal the value type");
                     }
 

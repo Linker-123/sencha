@@ -16,6 +16,7 @@ fn main() {
     func main(a: i32, b: i32, c: i32) -> i32 {
         message1 := \"Abra Kadabra\"
         message2 := \"Hello, World!\"
+        var apple_count: i8 = -5
     }
     "
     .to_string();
