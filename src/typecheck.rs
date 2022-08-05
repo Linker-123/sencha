@@ -92,7 +92,6 @@ impl TypeContainer {
                     | BinaryOp::LessEq
                     | BinaryOp::Equal
                     | BinaryOp::NotEqual => self.resolve_type(&"bool".to_string()),
-                    _ => unreachable!(),
                 }
             }
             Node::Function(func) => {

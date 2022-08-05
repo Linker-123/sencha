@@ -26,15 +26,15 @@ pub enum Node {
     VarGet(String, usize, usize),
     Binary(Binary),
     Function(Function),
-    Call(Call),
+    // Call(Call),
     VarDecl(VarDecl),
-    Grouping(Grouping),
+    // Grouping(Grouping),
     Unary(Unary),
     Logical(Logical),
     Assign(Assign),
     For(For),
     If(If),
-    Use(Use),
+    // Use(Use),
     Ret(Ret),
     Block(Block),
     ExprStmt(ExprStmt),
@@ -52,14 +52,12 @@ pub enum BinaryOp {
     LessEq,
     Equal,
     NotEqual,
-    None,
 }
 
 #[derive(PartialEq, Debug)]
 pub enum LogicalOp {
     And,
     Or,
-    None,
 }
 
 #[derive(PartialEq, Debug)]
@@ -111,17 +109,17 @@ impl Function {
     }
 }
 
-#[derive(Debug)]
-pub struct Call {
-    pub args: Vec<Box<Node>>,
-    pub callee: Box<Node>,
-}
+// #[derive(Debug)]
+// pub struct Call {
+//     pub args: Vec<Box<Node>>,
+//     pub callee: Box<Node>,
+// }
 
-impl Call {
-    pub fn new(args: Vec<Box<Node>>, callee: Box<Node>) -> Box<Node> {
-        Box::new(Node::Call(Call { args, callee }))
-    }
-}
+// impl Call {
+//     pub fn new(args: Vec<Box<Node>>, callee: Box<Node>) -> Box<Node> {
+//         Box::new(Node::Call(Call { args, callee }))
+//     }
+// }
 
 #[derive(Debug)]
 pub struct VarDecl {
@@ -149,16 +147,16 @@ impl VarDecl {
     }
 }
 
-#[derive(Debug)]
-pub struct Grouping {
-    pub expr: Box<Node>,
-}
+// #[derive(Debug)]
+// pub struct Grouping {
+//     pub expr: Box<Node>,
+// }
 
-impl Grouping {
-    pub fn new(expr: Box<Node>) -> Box<Node> {
-        Box::new(Node::Grouping(Grouping { expr }))
-    }
-}
+// impl Grouping {
+//     pub fn new(expr: Box<Node>) -> Box<Node> {
+//         Box::new(Node::Grouping(Grouping { expr }))
+//     }
+// }
 
 #[derive(Debug)]
 pub struct Unary {
@@ -248,18 +246,18 @@ impl If {
     }
 }
 
-#[derive(Debug)]
-pub struct Use {
-    pub module: Box<Node>,
-    pub item: String,
-    pub loc: (usize, usize),
-}
+// #[derive(Debug)]
+// pub struct Use {
+//     pub module: Box<Node>,
+//     pub item: String,
+//     pub loc: (usize, usize),
+// }
 
-impl Use {
-    pub fn new(module: Box<Node>, item: String, loc: (usize, usize)) -> Box<Node> {
-        Box::new(Node::Use(Use { module, item, loc }))
-    }
-}
+// impl Use {
+//     pub fn new(module: Box<Node>, item: String, loc: (usize, usize)) -> Box<Node> {
+//         Box::new(Node::Use(Use { module, item, loc }))
+//     }
+// }
 
 #[derive(Debug)]
 pub struct Ret {
