@@ -3,7 +3,7 @@ use crate::{
         Assign, Binary, BinaryOp, Block, ExprStmt, For, Function, FunctionArg, If, Logical,
         LogicalOp, Node, Ret, Unary, UnaryOp,
     },
-    tokenizer::{get_tok_loc, TokenKind, Tokenizer},
+    tokenizer::{get_tok_len, get_tok_loc, TokenKind, Tokenizer},
 };
 
 macro_rules! matches {
@@ -20,75 +20,106 @@ macro_rules! matches {
 macro_rules! consume {
     ($self: ident, $msg: expr, $($tts:tt)*) => {{
         if !matches!($self, $($tts)*) {
-            panic!("{}", $msg);
+            return Err($self.error($msg, &$self.current))
         }
     }};
 }
 
+type ParseResult<T> = Result<T, String>;
+
 pub struct Parser<'a> {
     tokenizer: Tokenizer<'a>,
     current: TokenKind,
+    source: &'a String,
     pub declarations: Vec<Box<Node>>,
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(mut tokenizer: Tokenizer<'a>) -> Parser {
+    pub fn new(mut tokenizer: Tokenizer<'a>, source: &'a String) -> Parser<'a> {
         let current = tokenizer.next().unwrap();
         Parser {
             tokenizer,
             current,
+            source,
             declarations: Default::default(),
         }
     }
 
-    pub fn parse(&mut self) {
+    pub fn parse(&mut self) -> ParseResult<()> {
         while !self.is_at_end() {
-            let declaration = self.declaration();
+            let declaration = self.declaration()?;
             if let Some(decl) = declaration {
                 self.declarations.push(decl);
             }
         }
+
+        Ok(())
     }
 
-    fn declaration(&mut self) -> Option<Box<Node>> {
+    fn error(&self, message: &str, token: &TokenKind) -> String {
+        let mut lines = self.source.lines();
+        let (line, column) = get_tok_loc(token);
+        let source_line: &str = lines.nth(line - 1).unwrap();
+        let src = source_line.trim_start();
+        let offset = source_line.len() - src.len();
+
+        let len = get_tok_len(token);
+
+        format!(
+            "Error: {} at {}:{}\n{}\n{}{}",
+            message,
+            line,
+            column,
+            src,
+            " ".repeat(column - offset - len - 1),
+            "~".repeat(len)
+        )
+    }
+
+    fn declaration(&mut self) -> ParseResult<Option<Box<Node>>> {
         if matches!(self, self.current, TokenKind::Func(_, _)) {
-            return Some(self.func_decl());
+            return Ok(Some(self.func_decl()?));
         }
 
-        self.statement()
+        let stmt = self.statement()?;
+        Ok(stmt)
     }
 
-    fn statement(&mut self) -> Option<Box<Node>> {
+    fn statement(&mut self) -> ParseResult<Option<Box<Node>>> {
         if matches!(self, self.current, TokenKind::ExprDelimiter(_, _)) {
-            return None;
+            return Ok(None);
         }
 
         let loc = get_tok_loc(&self.current);
         if matches!(self, self.current, TokenKind::LeftBrace(_, _)) {
-            return Some(Block::new(self.block()));
+            let block = self.block()?;
+            return Ok(Some(Block::new(block)));
         }
         if matches!(self, self.current, TokenKind::Ret(_, _)) {
-            return Some(self.ret_stmt(loc));
+            let stmt = self.ret_stmt(loc)?;
+            return Ok(Some(stmt));
         }
         if matches!(self, self.current, TokenKind::For(_, _)) {
-            return Some(self.for_stmt());
+            let stmt = self.for_stmt()?;
+            return Ok(Some(stmt));
         }
         if matches!(self, self.current, TokenKind::If(_, _)) {
-            return Some(self.if_stmt());
+            let stmt = self.if_stmt()?;
+            return Ok(Some(stmt));
         }
 
-        Some(self.expr_stmt())
+        let stmt = self.expr_stmt()?;
+        Ok(Some(stmt))
     }
 
-    fn func_decl(&mut self) -> Box<Node> {
+    fn func_decl(&mut self) -> Result<Box<Node>, String> {
         let name;
         let name_loc;
         if let TokenKind::IdenLiteral(literal, line, column) = &self.current {
             name = literal.clone();
             name_loc = (*line, *column);
         } else {
-            let (line, column) = get_tok_loc(&self.current);
-            panic!("Expected an identifier at {}:{}", line, column);
+            return Err(self.error("expected an identifier", &self.current));
         }
 
         self.advance();
@@ -104,105 +135,84 @@ impl<'a> Parser<'a> {
                     arg_name = literal.clone();
                     arg_name_loc = (*line, *column);
                 } else {
-                    let (line, column) = get_tok_loc(&self.current);
-                    panic!("Expected an identifier at {}:{}", line, column);
+                    return Err(self.error("expected an identifier", &self.current));
                 }
 
                 self.advance();
-
-                {
-                    let (line, column) = get_tok_loc(&self.current);
-                    consume!(
-                        self,
-                        format!("Expected a ':' at {}:{}", line, column),
-                        self.current,
-                        TokenKind::Colon(_, _)
-                    );
-                }
+                consume!(self, "expected a ':'", self.current, TokenKind::Colon(_, _));
 
                 let arg_type;
                 if let TokenKind::IdenLiteral(literal, _, _) = &self.current {
                     arg_type = literal.clone();
                 } else {
-                    let (line, column) = get_tok_loc(&self.current);
-                    panic!("Expected an identifier at {}:{}", line, column);
+                    return Err(self.error("expected an identifier", &self.current));
                 }
 
                 args.push(FunctionArg::new(arg_name, arg_name_loc, arg_type));
-
                 self.advance();
 
                 if !matches!(self, self.current, TokenKind::Comma(_, _)) {
                     break;
                 }
             }
-
-            {
-                let (line, column) = get_tok_loc(&self.current);
-                consume!(
-                    self,
-                    format!("Expected a ')' at {}:{}", line, column),
-                    self.current,
-                    TokenKind::RightParen(_, _)
-                );
-            }
-        }
-
-        {
-            let (line, column) = get_tok_loc(&self.current);
             consume!(
                 self,
-                format!("Expected a '{{' at {}:{}", line, column),
+                "expected a ')'",
                 self.current,
-                TokenKind::LeftBrace(_, _)
+                TokenKind::RightParen(_, _)
             );
         }
-
-        let body = self.block();
-        Function::new(name, name_loc, args, body, "".to_string())
-    }
-
-    fn if_stmt(&mut self) -> Box<Node> {
-        let cond = self.expr();
-        let (line, column) = get_tok_loc(&self.current);
         consume!(
             self,
-            format!("Expected a '{{' at {}:{}", line, column),
+            "expected a '{'",
             self.current,
             TokenKind::LeftBrace(_, _)
         );
 
-        let then_branch = self.block();
+        let body = self.block()?;
+        Ok(Function::new(name, name_loc, args, body, "".to_string()))
+    }
+
+    fn if_stmt(&mut self) -> ParseResult<Box<Node>> {
+        let cond = self.expr()?;
+        consume!(
+            self,
+            "expected a '{'",
+            self.current,
+            TokenKind::LeftBrace(_, _)
+        );
+
+        let then_branch = self.block()?;
         let mut else_branch = None;
         if matches!(self, self.current, TokenKind::Else(_, _)) {
             consume!(
                 self,
-                format!("Expected a '{{' at {}:{}", line, column),
+                "expected a '{'",
                 self.current,
                 TokenKind::LeftBrace(_, _)
             );
-            else_branch = Some(Block::new(self.block()));
+            else_branch = Some(Block::new(self.block()?));
         }
 
-        If::new(cond, Block::new(then_branch), else_branch)
+        Ok(If::new(cond, Block::new(then_branch), else_branch))
     }
 
-    fn ret_stmt(&mut self, loc: (usize, usize)) -> Box<Node> {
+    fn ret_stmt(&mut self, loc: (usize, usize)) -> ParseResult<Box<Node>> {
         let mut expr = None;
         if !std::matches!(self.current, TokenKind::ExprDelimiter(_, _)) {
-            expr = Some(self.expr());
+            expr = Some(self.expr()?);
         }
 
         consume!(
             self,
-            "Expected a ';' or a new line.",
+            "expected a ';' or a new line",
             self.current,
             TokenKind::ExprDelimiter(_, _)
         );
-        Ret::new(expr, loc)
+        Ok(Ret::new(expr, loc))
     }
 
-    fn for_stmt(&mut self) -> Box<Node> {
+    fn for_stmt(&mut self) -> ParseResult<Box<Node>> {
         let name;
         let name_loc;
         if let TokenKind::IdenLiteral(n, line, column) = &self.current {
@@ -210,38 +220,27 @@ impl<'a> Parser<'a> {
             name_loc = (*line, *column);
             self.advance();
         } else {
-            let (line, column) = get_tok_loc(&self.current);
-            panic!("Expected an identitfier at {}:{}", line, column)
+            return Err(self.error("expected an identifier", &self.current));
         }
 
+        consume!(self, "expected 'in'", self.current, TokenKind::In(_, _));
+        let target = self.expr()?;
         {
-            let (line, column) = get_tok_loc(&self.current);
             consume!(
                 self,
-                format!("Expected keyword 'in' at {}:{}", line, column),
-                self.current,
-                TokenKind::In(_, _)
-            );
-        }
-
-        let target = self.expr();
-        {
-            let (line, column) = get_tok_loc(&self.current);
-            consume!(
-                self,
-                format!("Expected a '{{' at {}:{}", line, column),
+                "expected a '{'",
                 self.current,
                 TokenKind::LeftBrace(_, _)
             );
         }
-        let body = self.block();
-        For::new(name, name_loc, target, Block::new(body))
+        let body = self.block()?;
+        Ok(For::new(name, name_loc, target, Block::new(body)))
     }
 
-    fn block(&mut self) -> Vec<Box<Node>> {
+    fn block(&mut self) -> ParseResult<Vec<Box<Node>>> {
         let mut statements: Vec<Box<Node>> = Vec::with_capacity(10);
         while !std::matches!(self.current, TokenKind::RightBrace(_, _)) && !self.is_at_end() {
-            let declaration = self.declaration();
+            let declaration = self.declaration()?;
             if let Some(decl) = declaration {
                 statements.push(decl);
             }
@@ -254,42 +253,42 @@ impl<'a> Parser<'a> {
             TokenKind::RightBrace(_, _)
         );
 
-        statements
+        Ok(statements)
     }
 
-    fn expr_stmt(&mut self) -> Box<Node> {
-        let expr = self.expr();
+    fn expr_stmt(&mut self) -> ParseResult<Box<Node>> {
+        let expr = self.expr()?;
         consume!(
             self,
             "Expected a ';' or a new line.",
             self.current,
             TokenKind::ExprDelimiter(_, _)
         );
-        ExprStmt::new(expr)
+        Ok(ExprStmt::new(expr))
     }
 
-    fn expr(&mut self) -> Box<Node> {
+    fn expr(&mut self) -> ParseResult<Box<Node>> {
         self.assignment()
     }
 
-    fn assignment(&mut self) -> Box<Node> {
-        let expr = self.or();
+    fn assignment(&mut self) -> ParseResult<Box<Node>> {
+        let expr = self.or()?;
         if matches!(self, self.current, TokenKind::Equal(_, _)) {
-            let value = self.assignment();
+            let value = self.assignment()?;
 
             match expr.as_ref() {
                 Node::VarGet(name, line, column) => {
-                    return Assign::new(name.to_string(), (*line, *column), value);
+                    return Ok(Assign::new(name.to_string(), (*line, *column), value));
                 }
-                _ => panic!("Invalid target for assignment"),
+                _ => return Err("Invalid target for assignment".to_string()),
             }
         }
 
-        expr
+        Ok(expr)
     }
 
-    fn or(&mut self) -> Box<Node> {
-        let mut expr = self.and();
+    fn or(&mut self) -> ParseResult<Box<Node>> {
+        let mut expr = self.and()?;
         loop {
             let lop;
 
@@ -299,14 +298,14 @@ impl<'a> Parser<'a> {
                 break;
             }
 
-            let right = self.and();
+            let right = self.and()?;
             expr = Logical::new(expr, right, lop);
         }
-        expr
+        Ok(expr)
     }
 
-    fn and(&mut self) -> Box<Node> {
-        let mut expr = self.equality();
+    fn and(&mut self) -> ParseResult<Box<Node>> {
+        let mut expr = self.equality()?;
         loop {
             let lop;
 
@@ -316,14 +315,14 @@ impl<'a> Parser<'a> {
                 break;
             }
 
-            let right = self.equality();
+            let right = self.equality()?;
             expr = Logical::new(expr, right, lop);
         }
-        expr
+        Ok(expr)
     }
 
-    fn equality(&mut self) -> Box<Node> {
-        let mut expr = self.comparison();
+    fn equality(&mut self) -> ParseResult<Box<Node>> {
+        let mut expr = self.comparison()?;
         loop {
             let bop;
 
@@ -335,14 +334,14 @@ impl<'a> Parser<'a> {
                 break;
             }
 
-            let right = self.comparison();
+            let right = self.comparison()?;
             expr = Binary::new(expr, right, bop);
         }
-        expr
+        Ok(expr)
     }
 
-    fn comparison(&mut self) -> Box<Node> {
-        let mut expr = self.term();
+    fn comparison(&mut self) -> ParseResult<Box<Node>> {
+        let mut expr = self.term()?;
         loop {
             let bop;
 
@@ -358,14 +357,14 @@ impl<'a> Parser<'a> {
                 break;
             }
 
-            let right = self.term();
+            let right = self.term()?;
             expr = Binary::new(expr, right, bop);
         }
-        expr
+        Ok(expr)
     }
 
-    fn term(&mut self) -> Box<Node> {
-        let mut expr = self.factor();
+    fn term(&mut self) -> ParseResult<Box<Node>> {
+        let mut expr = self.factor()?;
         loop {
             let bop;
 
@@ -377,14 +376,14 @@ impl<'a> Parser<'a> {
                 break;
             }
 
-            let right = self.factor();
+            let right = self.factor()?;
             expr = Binary::new(expr, right, bop);
         }
-        expr
+        Ok(expr)
     }
 
-    fn factor(&mut self) -> Box<Node> {
-        let mut expr = self.unary();
+    fn factor(&mut self) -> ParseResult<Box<Node>> {
+        let mut expr = self.unary()?;
         loop {
             let bop;
 
@@ -396,13 +395,13 @@ impl<'a> Parser<'a> {
                 break;
             }
 
-            let right = self.unary();
+            let right = self.unary()?;
             expr = Binary::new(expr, right, bop);
         }
-        expr
+        Ok(expr)
     }
 
-    fn unary(&mut self) -> Box<Node> {
+    fn unary(&mut self) -> ParseResult<Box<Node>> {
         let mut uop = UnaryOp::None;
         let mut loc = (0, 0);
 
@@ -415,40 +414,38 @@ impl<'a> Parser<'a> {
         }
 
         if uop != UnaryOp::None {
-            let expr = self.unary();
-            return Unary::new(uop, loc, expr);
+            let expr = self.unary()?;
+            return Ok(Unary::new(uop, loc, expr));
         }
 
-        self.primary()
+        Ok(self.primary()?)
     }
 
-    fn primary(&mut self) -> Box<Node> {
-        let tok = self.current.clone();
-        let node = match tok {
-            TokenKind::True(line, column) => Node::BoolLiteral(true, line, column),
-            TokenKind::False(line, column) => Node::BoolLiteral(false, line, column),
+    fn primary(&mut self) -> ParseResult<Box<Node>> {
+        let node = match &self.current {
+            TokenKind::True(line, column) => Node::BoolLiteral(true, *line, *column),
+            TokenKind::False(line, column) => Node::BoolLiteral(false, *line, *column),
             TokenKind::IntLiteral(integer, line, column) => match integer.parse::<i32>() {
-                Ok(n) => Node::Signed32(n, line, column),
-                Err(e) => panic!("Couldn't parse i32 {} at {}:{}", e, line, column),
+                Ok(n) => Node::Signed32(n, *line, *column),
+                Err(_) => return Err(self.error("couldn't parse an i32", &self.current)),
             },
             TokenKind::FloatLiteral(float, line, column) => match float.parse::<f64>() {
-                Ok(n) => Node::F64(n, line, column),
-                Err(e) => panic!("Couldn't parse f64 {} at {}:{}", e, line, column),
+                Ok(n) => Node::F64(n, *line, *column),
+                Err(_) => return Err(self.error("couldn't parse an f64", &self.current)),
             },
             TokenKind::StrLiteral(string, line, column) => {
-                Node::StringLiteral(string, line, column)
+                Node::StringLiteral(string.clone(), *line, *column)
             }
-            TokenKind::IdenLiteral(ident, line, column) => Node::VarGet(ident, line, column),
-            TokenKind::LeftParen(_, _) => {
-                todo!();
+            TokenKind::IdenLiteral(ident, line, column) => {
+                Node::VarGet(ident.clone(), *line, *column)
             }
             _ => {
-                panic!("Unexpected token: {:#?}", tok);
+                return Err(self.error("unexpected token", &self.current));
             }
         };
 
         self.advance();
-        Box::new(node)
+        Ok(Box::new(node))
     }
 
     fn advance(&mut self) {

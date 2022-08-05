@@ -85,6 +85,50 @@ pub fn get_tok_loc(token: &TokenKind) -> (usize, usize) {
     }
 }
 
+pub fn get_tok_len(token: &TokenKind) -> usize {
+    match token {
+        TokenKind::LeftBrace(_, _) => 1,
+        TokenKind::RightBrace(_, _) => 1,
+        TokenKind::LeftParen(_, _) => 1,
+        TokenKind::RightParen(_, _) => 1,
+        TokenKind::IntLiteral(literal, _, _) => literal.len(),
+        TokenKind::FloatLiteral(literal, _, _) => literal.len(),
+        TokenKind::StrLiteral(literal, _, _) => literal.len() + 2,
+        TokenKind::IdenLiteral(litereal, _, _) => litereal.len(),
+        TokenKind::Func(_, _) => 4,
+        TokenKind::Mod(_, _) => 3,
+        TokenKind::Use(_, _) => 3,
+        TokenKind::Ret(_, _) => 3,
+        TokenKind::Arrow(_, _) => 2,
+        TokenKind::Colon(_, _) => 1,
+        TokenKind::ColonEq(a, b) => 2,
+        TokenKind::Comma(_, _) => 1,
+        TokenKind::Dot(_, _) => 1,
+        TokenKind::Plus(_, _) => 1,
+        TokenKind::Minus(_, _) => 1,
+        TokenKind::Star(_, _) => 1,
+        TokenKind::Slash(_, _) => 1,
+        TokenKind::True(_, _) => 4,
+        TokenKind::False(_, _) => 5,
+        TokenKind::Bang(_, _) => 1,
+        TokenKind::Greater(_, _) => 1,
+        TokenKind::GreaterEq(_, _) => 2,
+        TokenKind::Less(_, _) => 1,
+        TokenKind::LessEq(_, _) => 2,
+        TokenKind::EqualEqual(_, _) => 2,
+        TokenKind::NotEqual(_, _) => 2,
+        TokenKind::Equal(_, _) => 1,
+        TokenKind::And(_, _) => 2,
+        TokenKind::Or(_, _) => 2,
+        TokenKind::For(_, _) => 3,
+        TokenKind::In(_, _) => 2,
+        TokenKind::If(_, _) => 2,
+        TokenKind::Else(_, _) => 4,
+        TokenKind::ExprDelimiter(_, _) => 1,
+        TokenKind::Eof => 0,
+    }
+}
+
 fn is_digit(c: char) -> bool {
     c >= '0' && c <= '9'
 }
@@ -196,7 +240,7 @@ impl<'a> Tokenizer<'a> {
         while self.peek() != Some('"') && !self.is_at_end() {
             if self.peek() == Some('\n') {
                 self.line += 1;
-                self.column = 0;
+                self.column = 1;
             }
             self.advance();
         }
@@ -349,7 +393,7 @@ impl<'a> Iterator for Tokenizer<'a> {
             ';' => Some(TokenKind::ExprDelimiter(self.line, self.column)),
             '\n' => {
                 self.line += 1;
-                self.column = 0;
+                self.column = 1;
                 Some(TokenKind::ExprDelimiter(self.line, self.column))
             }
             _ => None,
