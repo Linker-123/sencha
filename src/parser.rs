@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Binary, BinaryOp, Node, Unary, UnaryOp},
+    ast::{Binary, BinaryOp, Logical, LogicalOp, Node, Unary, UnaryOp},
     tokenizer::{get_tok_loc, TokenKind, Tokenizer},
 };
 
@@ -53,7 +53,41 @@ impl<'a> Parser<'a> {
     }
 
     pub fn expr(&mut self) -> Box<Node> {
-        self.equality()
+        self.or()
+    }
+
+    fn or(&mut self) -> Box<Node> {
+        let mut expr = self.and();
+        loop {
+            let lop;
+
+            if matches!(self, self.current, TokenKind::Or(_, _)) {
+                lop = LogicalOp::Or;
+            } else {
+                break;
+            }
+
+            let right = self.and();
+            expr = Logical::new(expr, right, lop);
+        }
+        expr
+    }
+
+    fn and(&mut self) -> Box<Node> {
+        let mut expr = self.equality();
+        loop {
+            let lop;
+
+            if matches!(self, self.current, TokenKind::And(_, _)) {
+                lop = LogicalOp::And;
+            } else {
+                break;
+            }
+
+            let right = self.equality();
+            expr = Logical::new(expr, right, lop);
+        }
+        expr
     }
 
     fn equality(&mut self) -> Box<Node> {

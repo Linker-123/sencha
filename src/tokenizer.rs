@@ -30,6 +30,8 @@ pub enum TokenKind {
     LessEq(usize, usize),
     EqualEqual(usize, usize),
     NotEqual(usize, usize),
+    And(usize, usize),
+    Or(usize, usize),
     Equal(usize, usize),
     NewLine(usize, usize),
     Eof,
@@ -69,6 +71,8 @@ pub fn get_tok_loc(token: &TokenKind) -> (usize, usize) {
         TokenKind::EqualEqual(a, b) => (*a, *b),
         TokenKind::NotEqual(a, b) => (*a, *b),
         TokenKind::Equal(a, b) => (*a, *b),
+        TokenKind::And(a, b) => (*a, *b),
+        TokenKind::Or(a, b) => (*a, *b),
         TokenKind::Eof => panic!("Unsupported token"),
     }
 }
@@ -319,6 +323,16 @@ impl<'a> Iterator for Tokenizer<'a> {
                 TokenKind::EqualEqual(self.line, self.column)
             } else {
                 TokenKind::Equal(self.line, self.column)
+            }),
+            '|' => Some(if self.matches('|') {
+                TokenKind::Or(self.line, self.column)
+            } else {
+                return None;
+            }),
+            '&' => Some(if self.matches('&') {
+                TokenKind::And(self.line, self.column)
+            } else {
+                return None;
             }),
             '\n' => {
                 self.line += 1;

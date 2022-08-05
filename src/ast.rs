@@ -161,14 +161,14 @@ impl Unary {
 
 #[derive(Debug)]
 pub struct Logical {
-    pub op: LogicalOp,
     pub lhs: Box<Node>,
     pub rhs: Box<Node>,
+    pub op: LogicalOp,
 }
 
 impl Logical {
-    pub fn new(op: LogicalOp, lhs: Box<Node>, rhs: Box<Node>) -> Box<Node> {
-        Box::new(Node::Logical(Logical { op, lhs, rhs }))
+    pub fn new(lhs: Box<Node>, rhs: Box<Node>, op: LogicalOp) -> Box<Node> {
+        Box::new(Node::Logical(Logical { lhs, rhs, op }))
     }
 }
 
