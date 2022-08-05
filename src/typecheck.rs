@@ -161,8 +161,14 @@ impl TypeContainer {
                 if let Some(ex_dt) = &decl.dtype {
                     let ex_type = self.resolve_type(ex_dt);
 
-                    if ex_type.kind != val_type.kind {
-                        panic!("Explicit variable type, doesn't equal the value type");
+                    if ex_type.kind == TypeKind::Numeric {
+                        if ex_type.kind != val_type.kind {
+                            panic!("Explicit variable type, doesn't equal the value type");
+                        }
+                    } else {
+                        if ex_type != val_type {
+                            panic!("Explicit variable type, doesn't equal the value type");
+                        }
                     }
 
                     decl.dtype_size = ex_type.size;

@@ -17,6 +17,7 @@ fn main() {
         message1 := \"Abra Kadabra\"
         message2 := \"Hello, World!\"
         var apple_count: i8 = -5
+        var x: str = \"test 123\"
     }
     "
     .to_string();
