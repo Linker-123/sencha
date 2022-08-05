@@ -5,6 +5,7 @@ use crate::ast::{BinaryOp, Node, UnaryOp};
 #[derive(PartialEq, Clone)]
 pub enum TypeKind {
     Numeric,
+    Float,
     Bool,
     Textual,
     None,
@@ -46,10 +47,10 @@ impl TypeContainer {
         container.create_type(Type::new("u16".to_string(), 2, TypeKind::Numeric));
         container.create_type(Type::new("i32".to_string(), 4, TypeKind::Numeric));
         container.create_type(Type::new("u32".to_string(), 4, TypeKind::Numeric));
-        container.create_type(Type::new("f32".to_string(), 4, TypeKind::Numeric));
+        container.create_type(Type::new("f32".to_string(), 4, TypeKind::Float));
         container.create_type(Type::new("i64".to_string(), 8, TypeKind::Numeric));
         container.create_type(Type::new("u64".to_string(), 8, TypeKind::Numeric));
-        container.create_type(Type::new("f64".to_string(), 8, TypeKind::Numeric));
+        container.create_type(Type::new("f64".to_string(), 8, TypeKind::Float));
         container.create_type(Type::new("bool".to_string(), 1, TypeKind::Bool));
         container.create_type(Type::new("void".to_string(), 0, TypeKind::None));
         container
@@ -165,6 +166,10 @@ impl TypeContainer {
                         if ex_type.kind != val_type.kind {
                             panic!("Explicit variable type, doesn't equal the value type");
                         }
+                    } else if ex_type.kind == TypeKind::Float {
+                        if ex_type.kind != val_type.kind {
+                            panic!("Explicit variable type, doesn't equal the value type");
+                        }
                     } else {
                         if ex_type != val_type {
                             panic!("Explicit variable type, doesn't equal the value type");
@@ -201,8 +206,18 @@ impl TypeContainer {
                 let local = self.resolve_local(&assign.name);
                 let val_type = self.check(&mut assign.value);
 
-                if local != val_type {
-                    panic!("Original variable data type doesn't equal the assigned one");
+                if val_type.kind == TypeKind::Numeric {
+                    if val_type.kind != local.kind {
+                        panic!("Original variable type, doesn't equal the value type");
+                    }
+                } else if val_type.kind == TypeKind::Float {
+                    if val_type.kind != local.kind {
+                        panic!("Original variable type, doesn't equal the value type");
+                    }
+                } else {
+                    if val_type != local {
+                        panic!("Original variable type, doesn't equal the value type");
+                    }
                 }
 
                 local

@@ -18,6 +18,9 @@ fn main() {
         message2 := \"Hello, World!\"
         var apple_count: i8 = -5
         var x: str = \"test 123\"
+
+        var test: f32 = 21.0
+        test = 21.2
     }
     "
     .to_string();
