@@ -14,11 +14,8 @@ mod typecheck;
 
 fn main() {
     let source = "
-    func main {
-        {
-            apple_count := 21
-        }
-        apple_count = apple_count + 1
+    func main(a: i32, b: i32, c: i32) -> i32 {
+        apple_count := 21
     }
     "
     .to_string();
@@ -27,7 +24,8 @@ fn main() {
     parser.parse();
 
     let mut checker = TypeContainer::new();
-    for decl in &parser.declarations {
+    for decl in &mut parser.declarations {
         checker.check(decl);
     }
+    println!("declarations: {:#?}", parser.declarations);
 }

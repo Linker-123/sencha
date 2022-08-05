@@ -3,6 +3,7 @@ pub struct FunctionArg {
     pub name: String,
     pub name_loc: (usize, usize),
     pub dtype: String,
+    pub size: usize,
 }
 
 impl FunctionArg {
@@ -11,16 +12,17 @@ impl FunctionArg {
             name,
             name_loc,
             dtype,
+            size: 0,
         }
     }
 }
 
 #[derive(Debug)]
 pub enum Node {
-    Number(String, usize, usize),
-    Float(String, usize, usize),
+    Number(String, usize, usize, usize),
+    Float(String, usize, usize, usize),
     StringLiteral(String, usize, usize),
-    BoolLiteral(bool, usize, usize),
+    BoolLiteral(bool, usize, usize, usize),
     VarGet(String, usize, usize),
     Binary(Binary),
     Function(Function),
@@ -87,6 +89,7 @@ pub struct Function {
     pub args: Vec<FunctionArg>,
     pub body: Box<Node>,
     pub ret_type: Option<String>,
+    pub ret_size: usize,
 }
 
 impl Function {
@@ -103,6 +106,7 @@ impl Function {
             args,
             body,
             ret_type,
+            ret_size: 0,
         }))
     }
 }
@@ -124,6 +128,7 @@ pub struct VarDecl {
     pub name: String,
     pub name_loc: (usize, usize),
     pub dtype: Option<String>,
+    pub dtype_size: usize,
     pub value: Box<Node>,
 }
 
@@ -139,6 +144,7 @@ impl VarDecl {
             name_loc,
             dtype,
             value,
+            dtype_size: 0,
         }))
     }
 }

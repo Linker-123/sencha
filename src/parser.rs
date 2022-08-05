@@ -530,13 +530,13 @@ impl<'a> Parser<'a> {
 
     fn primary(&mut self) -> ParseResult<Box<Node>> {
         let node = match &self.current {
-            TokenKind::True(line, column) => Node::BoolLiteral(true, *line, *column),
-            TokenKind::False(line, column) => Node::BoolLiteral(false, *line, *column),
+            TokenKind::True(line, column) => Node::BoolLiteral(true, 0, *line, *column),
+            TokenKind::False(line, column) => Node::BoolLiteral(false, 0, *line, *column),
             TokenKind::IntLiteral(integer, line, column) => {
-                Node::Number(integer.clone(), *line, *column)
+                Node::Number(integer.clone(), 0, *line, *column)
             }
             TokenKind::FloatLiteral(float, line, column) => {
-                Node::Float(float.clone(), *line, *column)
+                Node::Float(float.clone(), 0, *line, *column)
             }
             TokenKind::StrLiteral(string, line, column) => {
                 Node::StringLiteral(string.clone(), *line, *column)

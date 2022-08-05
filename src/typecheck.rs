@@ -58,15 +58,27 @@ impl TypeContainer {
         }
     }
 
-    pub fn check(&mut self, node: &Box<Node>) -> Type {
-        match &**node {
-            Node::Number(_, _, _) => self.resolve_type(&"i32".to_string()),
-            Node::Float(_, _, _) => self.resolve_type(&"f64".to_string()),
-            Node::BoolLiteral(_, _, _) => self.resolve_type(&"bool".to_string()),
+    pub fn check(&mut self, node: &mut Box<Node>) -> Type {
+        match &mut **node {
+            Node::Number(_, size, _, _) => {
+                let tipe = self.resolve_type(&"i32".to_string());
+                *size = tipe.size;
+                tipe
+            }
+            Node::Float(_, size, _, _) => {
+                let tipe = self.resolve_type(&"f64".to_string());
+                *size = tipe.size;
+                tipe
+            }
+            Node::BoolLiteral(_, size, _, _) => {
+                let tipe = self.resolve_type(&"bool".to_string());
+                *size = tipe.size;
+                tipe
+            }
             Node::VarGet(name, _, _) => self.resolve_local(name),
             Node::Binary(binary) => {
-                let l_type = self.check(&binary.lhs);
-                let r_type = self.check(&binary.rhs);
+                let l_type = self.check(&mut binary.lhs);
+                let r_type = self.check(&mut binary.rhs);
 
                 if l_type != r_type {
                     panic!("Binary expression has invalid operands");
@@ -90,14 +102,17 @@ impl TypeContainer {
                 };
 
                 let tipe = self.resolve_type(&ret_type);
+                func.ret_size = tipe.size;
+
                 self.locals.insert(func.name.clone(), tipe.clone());
 
-                for arg in &func.args {
+                for arg in &mut func.args {
                     let arg_type = self.resolve_type(&arg.dtype);
+                    arg.size = arg_type.size;
                     self.locals.insert(arg.name.clone(), arg_type);
                 }
 
-                self.check(&func.body);
+                self.check(&mut func.body);
 
                 self.locals.remove(&func.name);
                 for arg in &func.args {
@@ -107,7 +122,7 @@ impl TypeContainer {
                 tipe
             }
             Node::VarDecl(decl) => {
-                let val_type = self.check(&decl.value);
+                let val_type = self.check(&mut decl.value);
                 if let Some(locals) = &mut self.created_locals {
                     locals.push(decl.name.clone());
                 }
@@ -120,9 +135,11 @@ impl TypeContainer {
                         panic!("Explicit variable type, doesn't equal the value type");
                     }
 
+                    decl.dtype_size = ex_type.size;
                     self.locals.insert(decl.name.clone(), ex_type.clone());
                     ex_type
                 } else {
+                    decl.dtype_size = val_type.size;
                     self.locals.insert(decl.name.clone(), val_type.clone());
                     val_type
                 }
@@ -131,12 +148,12 @@ impl TypeContainer {
                 if unary.op == UnaryOp::Not {
                     self.resolve_type(&"bool".to_string())
                 } else {
-                    self.check(&unary.expr)
+                    self.check(&mut unary.expr)
                 }
             }
             Node::Logical(logical) => {
-                let l_type = self.check(&logical.lhs);
-                let r_type = self.check(&logical.rhs);
+                let l_type = self.check(&mut logical.lhs);
+                let r_type = self.check(&mut logical.rhs);
 
                 if l_type != r_type {
                     panic!("Logical expression has invalid operands");
@@ -146,7 +163,7 @@ impl TypeContainer {
             }
             Node::Assign(assign) => {
                 let local = self.resolve_local(&assign.name);
-                let val_type = self.check(&assign.value);
+                let val_type = self.check(&mut assign.value);
 
                 if local != val_type {
                     panic!("Original variable data type doesn't equal the assigned one");
@@ -154,7 +171,7 @@ impl TypeContainer {
 
                 local
             }
-            Node::ExprStmt(expr_stmt) => self.check(&expr_stmt.expr),
+            Node::ExprStmt(expr_stmt) => self.check(&mut expr_stmt.expr),
             Node::Block(block) => {
                 let mut old_locals = vec![];
                 if let Some(locals) = self.created_locals.take() {
@@ -162,8 +179,8 @@ impl TypeContainer {
                 }
                 self.created_locals = Some(vec![]);
 
-                for node in &block.statements {
-                    self.check(&node);
+                for node in &mut block.statements {
+                    self.check(node);
                 }
 
                 if let Some(locals) = &self.created_locals {
@@ -176,14 +193,14 @@ impl TypeContainer {
                 self.resolve_type(&"void".to_string())
             }
             Node::If(if_stmt) => {
-                let cond_type = self.check(&if_stmt.condition);
+                let cond_type = self.check(&mut if_stmt.condition);
                 if cond_type != self.resolve_type(&"bool".to_string()) {
                     panic!("If condition doesn't evaluate to a bool");
                 }
 
-                self.check(&if_stmt.then_block);
+                self.check(&mut if_stmt.then_block);
 
-                if let Some(else_block) = &if_stmt.else_block {
+                if let Some(else_block) = &mut if_stmt.else_block {
                     self.check(else_block);
                 }
 
