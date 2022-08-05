@@ -5,6 +5,7 @@ use crate::{
     },
     tokenizer::{get_tok_len, get_tok_loc, TokenKind, Tokenizer},
 };
+use colored::Colorize;
 
 macro_rules! matches {
     ($self: ident, $($tts:tt)*) => {
@@ -45,15 +46,44 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse(&mut self) -> ParseResult<()> {
+    pub fn parse(&mut self) {
         while !self.is_at_end() {
-            let declaration = self.declaration()?;
-            if let Some(decl) = declaration {
-                self.declarations.push(decl);
+            let declaration = self.declaration();
+            match declaration {
+                Ok(res) => {
+                    if let Some(decl) = res {
+                        self.declarations.push(decl);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("{}", e);
+                    self.synchronize();
+                }
             }
         }
+    }
 
-        Ok(())
+    fn synchronize(&mut self) {
+        let mut previous = self.current.clone();
+        self.advance();
+
+        while !self.is_at_end() {
+            if let TokenKind::ExprDelimiter(_, _) = previous {
+                return;
+            }
+            match self.current {
+                TokenKind::Func(_, _)
+                | TokenKind::For(_, _)
+                | TokenKind::If(_, _)
+                | TokenKind::Ret(_, _)
+                | TokenKind::Use(_, _)
+                | TokenKind::Mod(_, _)
+                | TokenKind::Else(_, _) => return,
+                _ => (),
+            }
+            previous = self.current.clone();
+            self.advance();
+        }
     }
 
     fn error(&self, message: &str, token: &TokenKind) -> String {
@@ -66,13 +96,14 @@ impl<'a> Parser<'a> {
         let len = get_tok_len(token);
 
         format!(
-            "Error: {} at {}:{}\n{}\n{}{}",
-            message,
+            "{}:{}: {} {}\n{}\n{}{}",
             line,
             column,
+            "error:".red(),
+            message,
             src,
             " ".repeat(column - offset - len - 1),
-            "~".repeat(len)
+            "~".repeat(len).green()
         )
     }
 

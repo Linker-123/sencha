@@ -101,7 +101,7 @@ pub fn get_tok_len(token: &TokenKind) -> usize {
         TokenKind::Ret(_, _) => 3,
         TokenKind::Arrow(_, _) => 2,
         TokenKind::Colon(_, _) => 1,
-        TokenKind::ColonEq(a, b) => 2,
+        TokenKind::ColonEq(_, _) => 2,
         TokenKind::Comma(_, _) => 1,
         TokenKind::Dot(_, _) => 1,
         TokenKind::Plus(_, _) => 1,

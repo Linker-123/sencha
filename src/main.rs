@@ -14,11 +14,7 @@ fn main() {
     ".to_string();
     let tokenizer = Tokenizer::new(&source);
     let mut parser = Parser::new(tokenizer, &source);
-    let res = parser.parse();
-    match res {
-        Err(e) => eprintln!("{}", e),
-        _ => ()
-    }
+    parser.parse();
 
     println!("{:#?}", parser.declarations);
 }
