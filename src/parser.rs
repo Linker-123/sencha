@@ -80,7 +80,6 @@ impl<'a> Parser<'a> {
             if matches!(self, self.current, TokenKind::Or(_, _)) {
                 lop = LogicalOp::Or;
             } else {
-                println!("Or broke");
                 break;
             }
 
