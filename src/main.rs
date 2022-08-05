@@ -14,7 +14,8 @@ mod typecheck;
 fn main() {
     let source = "
     func main(a: i32, b: i32, c: i32) -> i32 {
-        apple_count := \"Abra Kadabra\"
+        message1 := \"Abra Kadabra\"
+        message2 := \"Hello, World!\"
     }
     "
     .to_string();
