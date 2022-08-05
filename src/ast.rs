@@ -1,8 +1,18 @@
 #[derive(Debug)]
 pub struct FunctionArg {
-    dtype: String,
-    loc: (usize, usize),
-    name: String,
+    pub name: String,
+    pub name_loc: (usize, usize),
+    pub dtype: String,
+}
+
+impl FunctionArg {
+    pub fn new(name: String, name_loc: (usize, usize), dtype: String) -> FunctionArg {
+        FunctionArg {
+            name,
+            name_loc,
+            dtype,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -218,11 +228,15 @@ impl For {
 pub struct If {
     pub condition: Box<Node>,
     pub then_block: Box<Node>,
-    pub else_block: Box<Node>,
+    pub else_block: Option<Box<Node>>,
 }
 
 impl If {
-    pub fn new(condition: Box<Node>, then_block: Box<Node>, else_block: Box<Node>) -> Box<Node> {
+    pub fn new(
+        condition: Box<Node>,
+        then_block: Box<Node>,
+        else_block: Option<Box<Node>>,
+    ) -> Box<Node> {
         Box::new(Node::If(If {
             condition,
             then_block,

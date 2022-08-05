@@ -9,10 +9,8 @@ mod tokenizer;
 
 fn main() {
     let source = "
-    y = 5+1
-    
-    for x in 2+3/7 || 1 {
-        x = 1
+    func main {
+        x = 3
     }
     ".to_string();
     let tokenizer = Tokenizer::new(&source);

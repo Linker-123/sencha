@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Assign, Binary, BinaryOp, Block, ExprStmt, For, Logical, LogicalOp, Node, Ret, Unary,
-        UnaryOp,
+        Assign, Binary, BinaryOp, Block, ExprStmt, For, Function, FunctionArg, If, Logical,
+        LogicalOp, Node, Ret, Unary, UnaryOp,
     },
     tokenizer::{get_tok_loc, TokenKind, Tokenizer},
 };
@@ -51,6 +51,10 @@ impl<'a> Parser<'a> {
     }
 
     fn declaration(&mut self) -> Option<Box<Node>> {
+        if matches!(self, self.current, TokenKind::Func(_, _)) {
+            return Some(self.func_decl());
+        }
+
         self.statement()
     }
 
@@ -69,8 +73,118 @@ impl<'a> Parser<'a> {
         if matches!(self, self.current, TokenKind::For(_, _)) {
             return Some(self.for_stmt());
         }
+        if matches!(self, self.current, TokenKind::If(_, _)) {
+            return Some(self.if_stmt());
+        }
 
         Some(self.expr_stmt())
+    }
+
+    fn func_decl(&mut self) -> Box<Node> {
+        let name;
+        let name_loc;
+        if let TokenKind::IdenLiteral(literal, line, column) = &self.current {
+            name = literal.clone();
+            name_loc = (*line, *column);
+        } else {
+            let (line, column) = get_tok_loc(&self.current);
+            panic!("Expected an identifier at {}:{}", line, column);
+        }
+
+        self.advance();
+
+        let mut args = Vec::with_capacity(10);
+        if let TokenKind::LeftParen(_, _) = &self.current {
+            self.advance();
+            loop {
+                // stuff
+                let arg_name;
+                let arg_name_loc;
+                if let TokenKind::IdenLiteral(literal, line, column) = &self.current {
+                    arg_name = literal.clone();
+                    arg_name_loc = (*line, *column);
+                } else {
+                    let (line, column) = get_tok_loc(&self.current);
+                    panic!("Expected an identifier at {}:{}", line, column);
+                }
+
+                self.advance();
+
+                {
+                    let (line, column) = get_tok_loc(&self.current);
+                    consume!(
+                        self,
+                        format!("Expected a ':' at {}:{}", line, column),
+                        self.current,
+                        TokenKind::Colon(_, _)
+                    );
+                }
+
+                let arg_type;
+                if let TokenKind::IdenLiteral(literal, _, _) = &self.current {
+                    arg_type = literal.clone();
+                } else {
+                    let (line, column) = get_tok_loc(&self.current);
+                    panic!("Expected an identifier at {}:{}", line, column);
+                }
+
+                args.push(FunctionArg::new(arg_name, arg_name_loc, arg_type));
+
+                self.advance();
+
+                if !matches!(self, self.current, TokenKind::Comma(_, _)) {
+                    break;
+                }
+            }
+
+            {
+                let (line, column) = get_tok_loc(&self.current);
+                consume!(
+                    self,
+                    format!("Expected a ')' at {}:{}", line, column),
+                    self.current,
+                    TokenKind::RightParen(_, _)
+                );
+            }
+        }
+
+        {
+            let (line, column) = get_tok_loc(&self.current);
+            consume!(
+                self,
+                format!("Expected a '{{' at {}:{}", line, column),
+                self.current,
+                TokenKind::LeftBrace(_, _)
+            );
+        }
+
+        let body = self.block();
+        Function::new(name, name_loc, args, body, "".to_string())
+    }
+
+    fn if_stmt(&mut self) -> Box<Node> {
+        let cond = self.expr();
+        let (line, column) = get_tok_loc(&self.current);
+        consume!(
+            self,
+            format!("Expected a '{{' at {}:{}", line, column),
+            self.current,
+            TokenKind::LeftBrace(_, _)
+        );
+
+        let then_branch = self.block();
+        let mut else_branch = None;
+        if matches!(self, self.current, TokenKind::Else(_, _)) {
+            consume!(
+                self,
+                format!("Expected a '{{' at {}:{}", line, column),
+                self.current,
+                TokenKind::LeftBrace(_, _)
+            );
+            else_branch = Some(Block::new(self.block()));
+        }
+
+        If::new(cond, Block::new(then_branch), else_branch)
     }
 
     fn ret_stmt(&mut self, loc: (usize, usize)) -> Box<Node> {
