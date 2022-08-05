@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Binary, BinaryOp, Logical, LogicalOp, Node, Unary, UnaryOp},
+    ast::{Assign, Binary, BinaryOp, Logical, LogicalOp, Node, Unary, UnaryOp},
     tokenizer::{get_tok_loc, TokenKind, Tokenizer},
 };
 
@@ -53,7 +53,23 @@ impl<'a> Parser<'a> {
     }
 
     pub fn expr(&mut self) -> Box<Node> {
-        self.or()
+        self.assignment()
+    }
+
+    fn assignment(&mut self) -> Box<Node> {
+        let expr = self.or();
+        if matches!(self, self.current, TokenKind::Equal(_, _)) {
+            let value = self.assignment();
+
+            match expr.as_ref() {
+                Node::VarGet(name, line, column) => {
+                    return Assign::new(name.to_string(), (*line, *column), value);
+                }
+                _ => panic!("Invalid target for assignment"),
+            }
+        }
+
+        expr
     }
 
     fn or(&mut self) -> Box<Node> {
@@ -64,6 +80,7 @@ impl<'a> Parser<'a> {
             if matches!(self, self.current, TokenKind::Or(_, _)) {
                 lop = LogicalOp::Or;
             } else {
+                println!("Or broke");
                 break;
             }
 
@@ -97,7 +114,7 @@ impl<'a> Parser<'a> {
 
             if matches!(self, self.current, TokenKind::NotEqual(_, _)) {
                 bop = BinaryOp::NotEqual;
-            } else if matches!(self, self.current, TokenKind::Equal(_, _)) {
+            } else if matches!(self, self.current, TokenKind::EqualEqual(_, _)) {
                 bop = BinaryOp::Equal;
             } else {
                 break;
