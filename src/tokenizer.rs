@@ -24,6 +24,13 @@ pub enum TokenKind {
     True(usize, usize),
     False(usize, usize),
     Bang(usize, usize),
+    Greater(usize, usize),
+    GreaterEq(usize, usize),
+    Less(usize, usize),
+    LessEq(usize, usize),
+    EqualEqual(usize, usize),
+    NotEqual(usize, usize),
+    Equal(usize, usize),
     NewLine(usize, usize),
     Eof,
 }
@@ -55,6 +62,13 @@ pub fn get_tok_loc(token: &TokenKind) -> (usize, usize) {
         TokenKind::False(a, b) => (*a, *b),
         TokenKind::Bang(a, b) => (*a, *b),
         TokenKind::NewLine(a, b) => (*a, *b),
+        TokenKind::Greater(a, b) => (*a, *b),
+        TokenKind::GreaterEq(a, b) => (*a, *b),
+        TokenKind::Less(a, b) => (*a, *b),
+        TokenKind::LessEq(a, b) => (*a, *b),
+        TokenKind::EqualEqual(a, b) => (*a, *b),
+        TokenKind::NotEqual(a, b) => (*a, *b),
+        TokenKind::Equal(a, b) => (*a, *b),
         TokenKind::Eof => panic!("Unsupported token"),
     }
 }
@@ -157,6 +171,8 @@ impl<'a> Tokenizer<'a> {
                         while self.peek() != Some('\n') && !self.is_at_end() {
                             self.advance();
                         }
+                    } else {
+                        return;
                     }
                 }
                 _ => return,
@@ -284,7 +300,26 @@ impl<'a> Iterator for Tokenizer<'a> {
             '*' => Some(TokenKind::Star(self.line, self.column)),
             '/' => Some(TokenKind::Slash(self.line, self.column)),
             '"' => Some(self.string()),
-            '!' => Some(TokenKind::Bang(self.line, self.column)),
+            '!' => Some(if self.matches('=') {
+                TokenKind::NotEqual(self.line, self.column)
+            } else {
+                TokenKind::Bang(self.line, self.column)
+            }),
+            '>' => Some(if self.matches('=') {
+                TokenKind::GreaterEq(self.line, self.column)
+            } else {
+                TokenKind::Greater(self.line, self.column)
+            }),
+            '<' => Some(if self.matches('=') {
+                TokenKind::LessEq(self.line, self.column)
+            } else {
+                TokenKind::Less(self.line, self.column)
+            }),
+            '=' => Some(if self.matches('=') {
+                TokenKind::EqualEqual(self.line, self.column)
+            } else {
+                TokenKind::Equal(self.line, self.column)
+            }),
             '\n' => {
                 self.line += 1;
                 self.column = 0;

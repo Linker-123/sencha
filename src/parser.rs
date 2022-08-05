@@ -53,7 +53,68 @@ impl<'a> Parser<'a> {
     }
 
     pub fn expr(&mut self) -> Box<Node> {
-        self.factor()
+        self.equality()
+    }
+
+    fn equality(&mut self) -> Box<Node> {
+        let mut expr = self.comparison();
+        loop {
+            let bop;
+
+            if matches!(self, self.current, TokenKind::NotEqual(_, _)) {
+                bop = BinaryOp::NotEqual;
+            } else if matches!(self, self.current, TokenKind::Equal(_, _)) {
+                bop = BinaryOp::Equal;
+            } else {
+                break;
+            }
+
+            let right = self.comparison();
+            expr = Binary::new(expr, right, bop);
+        }
+        expr
+    }
+
+    fn comparison(&mut self) -> Box<Node> {
+        let mut expr = self.term();
+        loop {
+            let bop;
+
+            if matches!(self, self.current, TokenKind::Greater(_, _)) {
+                bop = BinaryOp::Greater;
+            } else if matches!(self, self.current, TokenKind::GreaterEq(_, _)) {
+                bop = BinaryOp::GreaterEq;
+            } else if matches!(self, self.current, TokenKind::Less(_, _)) {
+                bop = BinaryOp::Less;
+            } else if matches!(self, self.current, TokenKind::LessEq(_, _)) {
+                bop = BinaryOp::LessEq;
+            } else {
+                break;
+            }
+
+            let right = self.term();
+            expr = Binary::new(expr, right, bop);
+        }
+        expr
+    }
+
+    fn term(&mut self) -> Box<Node> {
+        let mut expr = self.factor();
+        loop {
+            let bop;
+
+            if matches!(self, self.current, TokenKind::Plus(_, _)) {
+                bop = BinaryOp::Add;
+            } else if matches!(self, self.current, TokenKind::Minus(_, _)) {
+                bop = BinaryOp::Sub;
+            } else {
+                break;
+            }
+
+            let right = self.factor();
+            expr = Binary::new(expr, right, bop);
+        }
+        expr
     }
 
     fn factor(&mut self) -> Box<Node> {
@@ -89,7 +150,6 @@ impl<'a> Parser<'a> {
 
         if uop != UnaryOp::None {
             let expr = self.unary();
-            println!("Current: {:#?}", self.current);
             return Unary::new(uop, loc, expr);
         }
 
@@ -102,7 +162,9 @@ impl<'a> Parser<'a> {
             TokenKind::True(line, column) => Node::BoolLiteral(true, line, column),
             TokenKind::False(line, column) => Node::BoolLiteral(false, line, column),
             TokenKind::IntLiteral(integer, line, column) => match integer.parse::<i32>() {
-                Ok(n) => Node::Signed32(n, line, column),
+                Ok(n) => {
+                    Node::Signed32(n, line, column)
+                }
                 Err(e) => panic!("Couldn't parse i32 {} at {}:{}", e, line, column),
             },
             TokenKind::FloatLiteral(float, line, column) => match float.parse::<f64>() {
