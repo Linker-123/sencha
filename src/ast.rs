@@ -96,7 +96,7 @@ pub struct Function {
     pub loc: (usize, usize),
     pub args: Vec<FunctionArg>,
     pub body: Vec<Box<Node>>,
-    pub ret_type: String,
+    pub ret_type: Option<String>,
 }
 
 impl Function {
@@ -105,7 +105,7 @@ impl Function {
         loc: (usize, usize),
         args: Vec<FunctionArg>,
         body: Vec<Box<Node>>,
-        ret_type: String,
+        ret_type: Option<String>,
     ) -> Box<Node> {
         Box::new(Node::Function(Function {
             name,
@@ -133,14 +133,21 @@ impl Call {
 pub struct VarDecl {
     pub name: String,
     pub name_loc: (usize, usize),
+    pub dtype: Option<String>,
     pub value: Box<Node>,
 }
 
 impl VarDecl {
-    pub fn new(name: String, name_loc: (usize, usize), value: Box<Node>) -> Box<Node> {
+    pub fn new(
+        name: String,
+        name_loc: (usize, usize),
+        dtype: Option<String>,
+        value: Box<Node>,
+    ) -> Box<Node> {
         Box::new(Node::VarDecl(VarDecl {
             name,
             name_loc,
+            dtype,
             value,
         }))
     }

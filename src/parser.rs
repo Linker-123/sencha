@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         Assign, Binary, BinaryOp, Block, ExprStmt, For, Function, FunctionArg, If, Logical,
-        LogicalOp, Node, Ret, Unary, UnaryOp,
+        LogicalOp, Node, Ret, Unary, UnaryOp, VarDecl,
     },
     tokenizer::{get_tok_len, get_tok_loc, TokenKind, Tokenizer},
 };
@@ -111,6 +111,11 @@ impl<'a> Parser<'a> {
         if matches!(self, self.current, TokenKind::Func(_, _)) {
             return Ok(Some(self.func_decl()?));
         }
+        if std::matches!(self.current, TokenKind::IdenLiteral(_, _, _))
+            && std::matches!(self.tokenizer.peek_ahead(), Some(TokenKind::ColonEq(_, _)))
+        {
+            return Ok(Some(self.implicit_var_decl()?));
+        }
 
         let stmt = self.statement()?;
         Ok(stmt)
@@ -143,7 +148,25 @@ impl<'a> Parser<'a> {
         Ok(Some(stmt))
     }
 
-    fn func_decl(&mut self) -> Result<Box<Node>, String> {
+    fn implicit_var_decl(&mut self) -> ParseResult<Box<Node>> {
+        let name;
+        let name_loc;
+
+        if let TokenKind::IdenLiteral(n, line, column) = &self.current {
+            name = n.clone();
+            name_loc = (*line, *column);
+        } else {
+            return Err(self.error("expected an identifier", &self.current));
+        }
+
+        self.advance();
+        self.advance(); // advance through the :=
+        let value = self.expr()?;
+
+        Ok(VarDecl::new(name, name_loc, None, value))
+    }
+
+    fn func_decl(&mut self) -> ParseResult<Box<Node>> {
         let name;
         let name_loc;
         if let TokenKind::IdenLiteral(literal, line, column) = &self.current {
@@ -193,6 +216,18 @@ impl<'a> Parser<'a> {
                 TokenKind::RightParen(_, _)
             );
         }
+
+        let mut ret_type = None;
+        if let TokenKind::Arrow(_, _) = &self.current {
+            self.advance();
+            if let TokenKind::IdenLiteral(iden, _, _) = &self.current {
+                ret_type = Some(iden.clone());
+            } else {
+                return Err(self.error("expected an identifier", &self.current));
+            }
+            self.advance();
+        }
+
         consume!(
             self,
             "expected a '{'",
@@ -201,7 +236,7 @@ impl<'a> Parser<'a> {
         );
 
         let body = self.block()?;
-        Ok(Function::new(name, name_loc, args, body, "".to_string()))
+        Ok(Function::new(name, name_loc, args, body, ret_type))
     }
 
     fn if_stmt(&mut self) -> ParseResult<Box<Node>> {

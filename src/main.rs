@@ -8,10 +8,12 @@ mod parser;
 mod tokenizer;
 
 fn main() {
-    let source = "
-    func main asdjiasdu9u132812931231
+    let source = "func main(a: u32, b: u32) -> u32 {
+        x := 3
+        z := \"Test\"
     }
-    ".to_string();
+    "
+    .to_string();
     let tokenizer = Tokenizer::new(&source);
     let mut parser = Parser::new(tokenizer, &source);
     parser.parse();

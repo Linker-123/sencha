@@ -21,7 +21,8 @@ typed_arg               =   identifier, ":", identifier;
 declaration             =   func_decl | mod_decl | var_decl;
 func_decl               =   "func", identifier, [ "(", typed_arg, { ",", typed_arg }, ")" ];
 mod_decl                =   "mod", identifier, "{", { declaration }, "}";
-var_decl                =   identifier, ":=", expression, "\n";
+implicit_var_decl       =   identifier, ":=", expression, "\n";
+explicit_var_decl       =   "var", identifier, ":", identifier , "=", expression, "\n";
 
 statement               =   expr_stmt | for_stmt | if_stmt | use_stmt | ret_stmt | block;
 

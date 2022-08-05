@@ -315,6 +315,22 @@ impl<'a> Tokenizer<'a> {
 
         TokenKind::IdenLiteral(identifier, self.line, self.column)
     }
+
+    /// Saves the cursor state and parses the next token then restores the cursor state
+    pub fn peek_ahead(&mut self) -> Option<TokenKind> {
+        let start = self.start;
+        let current = self.current;
+        let line = self.line;
+        let column = self.column;
+
+        let item = self.next();
+        self.start = start;
+        self.current = current;
+        self.line = line;
+        self.column = column;
+
+        item
+    }
 }
 
 impl<'a> Iterator for Tokenizer<'a> {
