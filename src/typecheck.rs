@@ -108,6 +108,9 @@ impl TypeContainer {
             }
             Node::VarDecl(decl) => {
                 let val_type = self.check(&decl.value);
+                if let Some(locals) = &mut self.created_locals {
+                    locals.push(decl.name.clone());
+                }
 
                 // If we got an explicit type
                 if let Some(ex_dt) = &decl.dtype {

@@ -15,10 +15,10 @@ mod typecheck;
 fn main() {
     let source = "
     func main {
-        z := 5 || 7
-        if z == 5 {
-            z = 991
+        {
+            apple_count := 21
         }
+        apple_count = apple_count + 1
     }
     "
     .to_string();
