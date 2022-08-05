@@ -33,6 +33,8 @@ pub enum TokenKind {
     And(usize, usize),
     Or(usize, usize),
     Equal(usize, usize),
+    For(usize, usize),
+    In(usize, usize),
     ExprDelimiter(usize, usize),
     Eof,
 }
@@ -72,6 +74,8 @@ pub fn get_tok_loc(token: &TokenKind) -> (usize, usize) {
         TokenKind::Equal(a, b) => (*a, *b),
         TokenKind::And(a, b) => (*a, *b),
         TokenKind::Or(a, b) => (*a, *b),
+        TokenKind::For(a, b) => (*a, *b),
+        TokenKind::In(a, b) => (*a, *b),
         TokenKind::ExprDelimiter(a, b) => (*a, *b),
         TokenKind::Eof => panic!("Unsupported token"),
     }
@@ -254,6 +258,8 @@ impl<'a> Tokenizer<'a> {
             "ret" => return TokenKind::Ret(self.line, self.column),
             "true" => return TokenKind::True(self.line, self.column),
             "false" => return TokenKind::False(self.line, self.column),
+            "for" => return TokenKind::For(self.line, self.column),
+            "in" => return TokenKind::In(self.line, self.column),
             _ => (),
         }
 

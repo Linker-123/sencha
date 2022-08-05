@@ -1,16 +1,10 @@
 use crate::{
-    ast::{Assign, Binary, BinaryOp, ExprStmt, Logical, LogicalOp, Node, Unary, UnaryOp},
+    ast::{
+        Assign, Binary, BinaryOp, Block, ExprStmt, For, Logical, LogicalOp, Node, Ret, Unary,
+        UnaryOp,
+    },
     tokenizer::{get_tok_loc, TokenKind, Tokenizer},
 };
-
-macro_rules! get_token {
-    ($tok: expr) => {
-        match $tok {
-            Some(t) => t,
-            None => panic!("Unexpected EOF"),
-        }
-    };
-}
 
 macro_rules! matches {
     ($self: ident, $($tts:tt)*) => {
@@ -24,9 +18,9 @@ macro_rules! matches {
 }
 
 macro_rules! consume {
-    ($self: ident, $msg: literal, $($tts:tt)*) => {{
+    ($self: ident, $msg: expr, $($tts:tt)*) => {{
         if !matches!($self, $($tts)*) {
-            panic!($msg);
+            panic!("{}", $msg);
         }
     }};
 }
@@ -34,7 +28,7 @@ macro_rules! consume {
 pub struct Parser<'a> {
     tokenizer: Tokenizer<'a>,
     current: TokenKind,
-    pub declarations: Vec<Node>,
+    pub declarations: Vec<Box<Node>>,
 }
 
 impl<'a> Parser<'a> {
@@ -47,7 +41,109 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn expr_stmt(&mut self) -> Box<Node> {
+    pub fn parse(&mut self) {
+        while !self.is_at_end() {
+            let declaration = self.declaration();
+            if let Some(decl) = declaration {
+                self.declarations.push(decl);
+            }
+        }
+    }
+
+    fn declaration(&mut self) -> Option<Box<Node>> {
+        self.statement()
+    }
+
+    fn statement(&mut self) -> Option<Box<Node>> {
+        if matches!(self, self.current, TokenKind::ExprDelimiter(_, _)) {
+            return None;
+        }
+
+        let loc = get_tok_loc(&self.current);
+        if matches!(self, self.current, TokenKind::LeftBrace(_, _)) {
+            return Some(Block::new(self.block()));
+        }
+        if matches!(self, self.current, TokenKind::Ret(_, _)) {
+            return Some(self.ret_stmt(loc));
+        }
+        if matches!(self, self.current, TokenKind::For(_, _)) {
+            return Some(self.for_stmt());
+        }
+
+        Some(self.expr_stmt())
+    }
+
+    fn ret_stmt(&mut self, loc: (usize, usize)) -> Box<Node> {
+        let mut expr = None;
+        if !std::matches!(self.current, TokenKind::ExprDelimiter(_, _)) {
+            expr = Some(self.expr());
+        }
+
+        consume!(
+            self,
+            "Expected a ';' or a new line.",
+            self.current,
+            TokenKind::ExprDelimiter(_, _)
+        );
+        Ret::new(expr, loc)
+    }
+
+    fn for_stmt(&mut self) -> Box<Node> {
+        let name;
+        let name_loc;
+        if let TokenKind::IdenLiteral(n, line, column) = &self.current {
+            name = n.clone();
+            name_loc = (*line, *column);
+            self.advance();
+        } else {
+            let (line, column) = get_tok_loc(&self.current);
+            panic!("Expected an identitfier at {}:{}", line, column)
+        }
+
+        {
+            let (line, column) = get_tok_loc(&self.current);
+            consume!(
+                self,
+                format!("Expected keyword 'in' at {}:{}", line, column),
+                self.current,
+                TokenKind::In(_, _)
+            );
+        }
+
+        let target = self.expr();
+        {
+            let (line, column) = get_tok_loc(&self.current);
+            consume!(
+                self,
+                format!("Expected a '{{' at {}:{}", line, column),
+                self.current,
+                TokenKind::LeftBrace(_, _)
+            );
+        }
+        let body = self.block();
+        For::new(name, name_loc, target, Block::new(body))
+    }
+
+    fn block(&mut self) -> Vec<Box<Node>> {
+        let mut statements: Vec<Box<Node>> = Vec::with_capacity(10);
+        while !std::matches!(self.current, TokenKind::RightBrace(_, _)) && !self.is_at_end() {
+            let declaration = self.declaration();
+            if let Some(decl) = declaration {
+                statements.push(decl);
+            }
+        }
+
+        consume!(
+            self,
+            "Expected an '}'",
+            self.current,
+            TokenKind::RightBrace(_, _)
+        );
+
+        statements
+    }
+
+    fn expr_stmt(&mut self) -> Box<Node> {
         let expr = self.expr();
         consume!(
             self,
@@ -233,7 +329,7 @@ impl<'a> Parser<'a> {
                 todo!();
             }
             _ => {
-                todo!();
+                panic!("Unexpected token: {:#?}", tok);
             }
         };
 
@@ -243,5 +339,9 @@ impl<'a> Parser<'a> {
 
     fn advance(&mut self) {
         self.current = self.tokenizer.next().unwrap_or_else(|| TokenKind::Eof);
+    }
+
+    fn is_at_end(&mut self) -> bool {
+        std::matches!(self.current, TokenKind::Eof)
     }
 }
