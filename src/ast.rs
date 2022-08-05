@@ -35,6 +35,7 @@ pub enum Node {
     Use(Use),
     Ret(Ret),
     Block(Block),
+    ExprStmt(ExprStmt),
 }
 
 #[derive(PartialEq, Debug)]
@@ -263,5 +264,16 @@ pub struct Block {
 impl Block {
     pub fn new(statements: Vec<Box<Node>>) -> Box<Node> {
         Box::new(Node::Block(Block { statements }))
+    }
+}
+
+#[derive(Debug)]
+pub struct ExprStmt {
+    pub expr: Box<Node>,
+}
+
+impl ExprStmt {
+    pub fn new(expr: Box<Node>) -> Box<Node> {
+        Box::new(Node::ExprStmt(ExprStmt { expr }))
     }
 }

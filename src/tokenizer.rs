@@ -33,7 +33,7 @@ pub enum TokenKind {
     And(usize, usize),
     Or(usize, usize),
     Equal(usize, usize),
-    NewLine(usize, usize),
+    ExprDelimiter(usize, usize),
     Eof,
 }
 
@@ -63,7 +63,6 @@ pub fn get_tok_loc(token: &TokenKind) -> (usize, usize) {
         TokenKind::True(a, b) => (*a, *b),
         TokenKind::False(a, b) => (*a, *b),
         TokenKind::Bang(a, b) => (*a, *b),
-        TokenKind::NewLine(a, b) => (*a, *b),
         TokenKind::Greater(a, b) => (*a, *b),
         TokenKind::GreaterEq(a, b) => (*a, *b),
         TokenKind::Less(a, b) => (*a, *b),
@@ -73,6 +72,7 @@ pub fn get_tok_loc(token: &TokenKind) -> (usize, usize) {
         TokenKind::Equal(a, b) => (*a, *b),
         TokenKind::And(a, b) => (*a, *b),
         TokenKind::Or(a, b) => (*a, *b),
+        TokenKind::ExprDelimiter(a, b) => (*a, *b),
         TokenKind::Eof => panic!("Unsupported token"),
     }
 }
@@ -334,10 +334,11 @@ impl<'a> Iterator for Tokenizer<'a> {
             } else {
                 return None;
             }),
+            ';' => Some(TokenKind::ExprDelimiter(self.line, self.column)),
             '\n' => {
                 self.line += 1;
                 self.column = 0;
-                Some(TokenKind::NewLine(self.line, self.column))
+                Some(TokenKind::ExprDelimiter(self.line, self.column))
             }
             _ => None,
         }

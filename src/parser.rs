@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Assign, Binary, BinaryOp, Logical, LogicalOp, Node, Unary, UnaryOp},
+    ast::{Assign, Binary, BinaryOp, ExprStmt, Logical, LogicalOp, Node, Unary, UnaryOp},
     tokenizer::{get_tok_loc, TokenKind, Tokenizer},
 };
 
@@ -12,19 +12,6 @@ macro_rules! get_token {
     };
 }
 
-macro_rules! consume {
-    ($tok: expr, $variant: path, $msg: literal, $($a:ident),*) => {{
-        let t = get_token!($tok);
-        match &t {
-            $variant($($a),*) => (),
-            _ => {
-                let (line, column) = get_tok_loc(&t);
-                panic!("{} at {}:{}", $msg, line, column)
-            }
-        }
-    }};
-}
-
 macro_rules! matches {
     ($self: ident, $($tts:tt)*) => {
         if std::matches!($($tts)*) {
@@ -34,6 +21,14 @@ macro_rules! matches {
             false
         }
     };
+}
+
+macro_rules! consume {
+    ($self: ident, $msg: literal, $($tts:tt)*) => {{
+        if !matches!($self, $($tts)*) {
+            panic!($msg);
+        }
+    }};
 }
 
 pub struct Parser<'a> {
@@ -52,7 +47,18 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn expr(&mut self) -> Box<Node> {
+    pub fn expr_stmt(&mut self) -> Box<Node> {
+        let expr = self.expr();
+        consume!(
+            self,
+            "Expected a ';' or a new line.",
+            self.current,
+            TokenKind::ExprDelimiter(_, _)
+        );
+        ExprStmt::new(expr)
+    }
+
+    fn expr(&mut self) -> Box<Node> {
         self.assignment()
     }
 
