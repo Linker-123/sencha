@@ -1,24 +1,28 @@
 extern crate lazy_static;
 
 use crate::typecheck::TypeContainer;
+use code::CodeGen;
 use parser::Parser;
-use reg::{RegisterManager, RegisterSize};
 use tokenizer::Tokenizer;
 
 mod ast;
-mod compile;
+mod code;
 mod error;
 mod parser;
 mod reg;
 mod tokenizer;
 mod typecheck;
+mod vartable;
+mod vstack;
 
 fn main() {
     env_logger::init();
 
     let source = "
     func main {
-        x := 1 + 2
+        x := 50
+        y := 5
+        z := x / y
     }
     "
     .to_string();
@@ -29,12 +33,8 @@ fn main() {
     let mut checker = TypeContainer::new();
     for decl in &mut parser.declarations {
         checker.check(decl);
-        println!("{:#?}", decl);
     }
 
-    let mut registers = RegisterManager::new();
-    for _ in 0..8 {
-        registers.allocate(RegisterSize::Oword);
-    }
-    registers.table(Some(RegisterSize::Oword));
+    let mut code_gen = CodeGen::new();
+    code_gen.generate(&parser.declarations);
 }

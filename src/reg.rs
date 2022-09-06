@@ -1,7 +1,28 @@
 use crate::error;
 use log::debug;
 
-#[derive(PartialEq, Debug)]
+pub fn size_to_reg_size(bytes: usize) -> RegisterSize {
+    match bytes {
+        1 => RegisterSize::Byte,
+        2 => RegisterSize::Word,
+        4 => RegisterSize::Dword,
+        8 => RegisterSize::Qword,
+        16 => RegisterSize::Oword,
+        _ => error::panic(format!("No register size for {} bytes", bytes)),
+    }
+}
+
+pub fn reg_size_to_str(size: RegisterSize) -> &'static str {
+    match size {
+        RegisterSize::Byte => "byte",
+        RegisterSize::Word => "word",
+        RegisterSize::Dword => "dword",
+        RegisterSize::Qword => "qword",
+        RegisterSize::Oword => "oword",
+    }
+}
+
+#[derive(PartialEq, Debug, Clone)]
 pub enum RegisterSize {
     Byte,
     Word,
