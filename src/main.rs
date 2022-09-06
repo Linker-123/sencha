@@ -1,26 +1,24 @@
 extern crate lazy_static;
 
-use parser::Parser;
-use tokenizer::Tokenizer;
 use crate::typecheck::TypeContainer;
+use parser::Parser;
+use reg::{RegisterManager, RegisterSize};
+use tokenizer::Tokenizer;
 
-mod asm;
 mod ast;
 mod compile;
+mod error;
 mod parser;
+mod reg;
 mod tokenizer;
 mod typecheck;
 
 fn main() {
-    let source = "
-    func main(a: i32, b: i32, c: i32) -> i32 {
-        message1 := \"Abra Kadabra\"
-        message2 := \"Hello, World!\"
-        var apple_count: i8 = -5
-        var x: str = \"test 123\"
+    env_logger::init();
 
-        var test: f32 = 21.0
-        test = 21.2
+    let source = "
+    func main {
+        x := 1 + 2
     }
     "
     .to_string();
@@ -31,6 +29,12 @@ fn main() {
     let mut checker = TypeContainer::new();
     for decl in &mut parser.declarations {
         checker.check(decl);
+        println!("{:#?}", decl);
     }
-    println!("declarations: {:#?}", parser.declarations);
+
+    let mut registers = RegisterManager::new();
+    for _ in 0..8 {
+        registers.allocate(RegisterSize::Oword);
+    }
+    registers.table(Some(RegisterSize::Oword));
 }
