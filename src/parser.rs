@@ -6,6 +6,7 @@ use crate::{
     tokenizer::{get_tok_len, get_tok_loc, TokenKind, Tokenizer},
 };
 use colored::Colorize;
+use log::error;
 
 macro_rules! matches {
     ($self: ident, $($tts:tt)*) => {
@@ -56,7 +57,7 @@ impl<'a> Parser<'a> {
                     }
                 }
                 Err(e) => {
-                    eprintln!("{}", e);
+                    error!("{}", e);
                     self.synchronize();
                 }
             }
@@ -96,10 +97,9 @@ impl<'a> Parser<'a> {
         let len = get_tok_len(token);
 
         format!(
-            "{}:{}: {} {}\n{}\n{}{}",
+            "{}:{} {}\n{}\n{}{}",
             line,
             column,
-            "error:".red(),
             message,
             src,
             " ".repeat(column - offset - len - 1),

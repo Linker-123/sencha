@@ -20,10 +20,7 @@ fn main() {
 
     let source = "
     func main {
-        var x: i8 = 5;
-        var z: u8 = 10;
-
-        y := x == z;
+        var x: i8;
     }
     "
     .to_string();
