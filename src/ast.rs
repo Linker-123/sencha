@@ -1,3 +1,5 @@
+use crate::typecheck::TaggedType;
+
 #[derive(Debug)]
 pub struct FunctionArg {
     pub name: String,
@@ -19,10 +21,10 @@ impl FunctionArg {
 
 #[derive(Debug)]
 pub enum Node {
-    Number(String, usize, usize, usize),
-    Float(String, usize, usize, usize),
+    Number(String, TaggedType, usize, usize),
+    Float(String, TaggedType, usize, usize),
     StringLiteral(String, usize, usize),
-    BoolLiteral(bool, usize, usize, usize),
+    BoolLiteral(bool, TaggedType, usize, usize),
     VarGet(String, usize, usize),
     Binary(Binary),
     Function(Function),
@@ -86,8 +88,8 @@ pub struct Function {
     pub loc: (usize, usize),
     pub args: Vec<FunctionArg>,
     pub body: Box<Node>,
-    pub ret_type: Option<String>,
-    pub ret_size: usize,
+    pub ret_type: TaggedType,
+    pub ret_type_str: Option<String>,
 }
 
 impl Function {
@@ -96,7 +98,8 @@ impl Function {
         loc: (usize, usize),
         args: Vec<FunctionArg>,
         body: Box<Node>,
-        ret_type: Option<String>,
+        ret_type: TaggedType,
+        ret_type_str: Option<String>,
     ) -> Box<Node> {
         Box::new(Node::Function(Function {
             name,
@@ -104,7 +107,7 @@ impl Function {
             args,
             body,
             ret_type,
-            ret_size: 0,
+            ret_type_str,
         }))
     }
 }
@@ -125,8 +128,8 @@ impl Function {
 pub struct VarDecl {
     pub name: String,
     pub name_loc: (usize, usize),
-    pub dtype: Option<String>,
-    pub dtype_size: usize,
+    pub dtype_str: Option<String>,
+    pub dtype: TaggedType,
     pub value: Box<Node>,
 }
 
@@ -134,15 +137,16 @@ impl VarDecl {
     pub fn new(
         name: String,
         name_loc: (usize, usize),
-        dtype: Option<String>,
+        dtype_str: Option<String>,
+        dtype: TaggedType,
         value: Box<Node>,
     ) -> Box<Node> {
         Box::new(Node::VarDecl(VarDecl {
             name,
             name_loc,
-            dtype,
+            dtype_str,
             value,
-            dtype_size: 0,
+            dtype,
         }))
     }
 }

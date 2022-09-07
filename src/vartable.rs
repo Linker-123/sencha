@@ -41,8 +41,8 @@ impl VarTable {
         self.scopes -= 1;
     }
 
-    pub fn push(&mut self, name: String, size: usize) -> usize {
-        let offset = self.vstack.push(size);
+    pub fn push(&mut self, name: String, size: usize, signed: Option<bool>) -> usize {
+        let offset = self.vstack.push(size, signed);
         self.items.push(VarItem::new(name, offset, self.scopes));
         offset
     }

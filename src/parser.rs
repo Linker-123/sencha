@@ -176,7 +176,13 @@ impl<'a> Parser<'a> {
         consume!(self, "expected '='", self.current, TokenKind::Equal(_, _));
 
         let value = self.expr()?;
-        Ok(VarDecl::new(name, name_loc, Some(dtype), value))
+        Ok(VarDecl::new(
+            name,
+            name_loc,
+            Some(dtype),
+            Default::default(),
+            value,
+        ))
     }
 
     fn implicit_var_decl(&mut self) -> ParseResult<Box<Node>> {
@@ -199,7 +205,13 @@ impl<'a> Parser<'a> {
         );
         let value = self.expr()?;
 
-        Ok(VarDecl::new(name, name_loc, None, value))
+        Ok(VarDecl::new(
+            name,
+            name_loc,
+            None,
+            Default::default(),
+            value,
+        ))
     }
 
     fn func_decl(&mut self) -> ParseResult<Box<Node>> {
@@ -277,6 +289,7 @@ impl<'a> Parser<'a> {
             name_loc,
             args,
             Block::new(body),
+            Default::default(),
             ret_type,
         ))
     }
@@ -530,13 +543,17 @@ impl<'a> Parser<'a> {
 
     fn primary(&mut self) -> ParseResult<Box<Node>> {
         let node = match &self.current {
-            TokenKind::True(line, column) => Node::BoolLiteral(true, 0, *line, *column),
-            TokenKind::False(line, column) => Node::BoolLiteral(false, 0, *line, *column),
+            TokenKind::True(line, column) => {
+                Node::BoolLiteral(true, Default::default(), *line, *column)
+            }
+            TokenKind::False(line, column) => {
+                Node::BoolLiteral(false, Default::default(), *line, *column)
+            }
             TokenKind::IntLiteral(integer, line, column) => {
-                Node::Number(integer.clone(), 0, *line, *column)
+                Node::Number(integer.clone(), Default::default(), *line, *column)
             }
             TokenKind::FloatLiteral(float, line, column) => {
-                Node::Float(float.clone(), 0, *line, *column)
+                Node::Float(float.clone(), Default::default(), *line, *column)
             }
             TokenKind::StrLiteral(string, line, column) => {
                 Node::StringLiteral(string.clone(), *line, *column)

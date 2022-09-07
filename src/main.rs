@@ -20,9 +20,10 @@ fn main() {
 
     let source = "
     func main {
-        x := 50
-        y := 5
-        z := x / y
+        var x: i8 = 5;
+        var z: u8 = 10;
+
+        y := x == z;
     }
     "
     .to_string();
@@ -35,6 +36,6 @@ fn main() {
         checker.check(decl);
     }
 
-    let mut code_gen = CodeGen::new();
-    code_gen.generate(&parser.declarations);
+    // let mut code_gen = CodeGen::new();
+    // code_gen.generate(&parser.declarations);
 }

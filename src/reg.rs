@@ -244,6 +244,7 @@ impl RegisterManager {
         ))
     }
 
+    #[allow(dead_code)]
     pub fn table(&self, size: Option<RegisterSize>) {
         println!("| {: <10} | {: <10} | {: <6}|", "Label:", "Size:", "Used:");
         for reg in &self.registers {

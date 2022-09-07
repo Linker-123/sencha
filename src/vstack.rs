@@ -1,6 +1,18 @@
+#[derive(Debug, Clone)]
+pub struct StackItem {
+    pub size: usize,
+    pub signed: Option<bool>
+}
+
+impl StackItem {
+    pub fn new(size: usize, signed: Option<bool>) -> StackItem {
+        StackItem { size, signed }
+    }
+}
+
 #[derive(Debug)]
 pub struct VirtualStack {
-    items: Vec<usize>,
+    items: Vec<StackItem>,
 }
 
 impl VirtualStack {
@@ -8,8 +20,8 @@ impl VirtualStack {
         VirtualStack { items: Vec::new() }
     }
 
-    pub fn push(&mut self, size: usize) -> usize {
-        self.items.push(size);
+    pub fn push(&mut self, size: usize, signed: Option<bool>) -> usize {
+        self.items.push(StackItem::new(size, signed));
         let offset = self.items.len() * 8;
         offset
     }
@@ -18,11 +30,7 @@ impl VirtualStack {
         self.items.len()
     }
 
-    pub fn get(&self, idx: usize) -> usize {
+    pub fn get(&self, idx: usize) -> StackItem {
         self.items[idx].clone()
-    }
-
-    pub fn pop(&mut self) {
-        self.items.pop();
     }
 }

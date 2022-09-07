@@ -1,7 +1,0 @@
---------------------------------------------------------------------------
-| Parameter Type | fifth and higher | fourth | third | second | leftmost |
-| floating-pint	 | stack	    | XMM3   | XMM2  | XMM1   | XMM0     |
-| integer        | stack            | R9     | R8    | RDX    | RCX      |
-| Aggregates 8-  | stack	    | R9     | R8    | RDX    | RCX	 |
-| 64bits/ptrs	 |		    |        |       |        |          |
---------------------------------------------------------------------------

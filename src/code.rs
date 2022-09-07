@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Binary, BinaryOp, Block, ExprStmt, Function, Node, VarDecl},
+    ast::{BinaryOp, Block, ExprStmt, Function, Node, VarDecl},
     error,
     reg::{self, RegisterLabel, RegisterManager},
     vartable::VarTable,
@@ -32,9 +32,9 @@ impl CodeGen {
             Node::ExprStmt(es) => self.process_expr_stmt(es),
 
             // Expressions
-            Node::Number(value, size, _, _) => {
+            Node::Number(value, tipe, _, _) => {
                 println!("push {}", value);
-                self.var_table.vstack.push(*size);
+                self.var_table.vstack.push(tipe.size, tipe.signed);
             }
             Node::VarGet(name, _, _) => {
                 let offset = self.var_table.find(name);
@@ -47,8 +47,8 @@ impl CodeGen {
                 let len = self.var_table.vstack.len();
                 let rhs_offset = len * 8;
                 let lhs_offset = len * 8 - 8;
-                let bytes = self.var_table.vstack.get(len - 1);
-                let reg_size = reg::size_to_reg_size(bytes);
+                let sitem = self.var_table.vstack.get(len - 1);
+                let reg_size = reg::size_to_reg_size(sitem.size);
 
                 if bi.op != BinaryOp::Div {
                     let reg1 = self.registers.allocate(reg_size.clone());
@@ -80,11 +80,19 @@ impl CodeGen {
                             println!("mov [rbp-{}], {}", rhs_offset, reg1str);
                         }
                         BinaryOp::Mul => {
-                            println!("mul {}, {}", reg1str, reg2str);
-                            println!("mov [rbp-{}], {}", rhs_offset, reg1str);
+                            if sitem.signed.is_some() && sitem.signed.unwrap() == true {
+                                println!("imul {}, {}", reg1str, reg2str);
+                                println!("mov [rbp-{}], {}", rhs_offset, reg1str);
+                            } else {
+                                println!("mul {}, {}", reg1str, reg2str);
+                                println!("mov [rbp-{}], {}", rhs_offset, reg1str);
+                            }
                         }
                         _ => unimplemented!(),
                     }
+
+                    self.registers.deallocate(reg1);
+                    self.registers.deallocate(reg2);
                 } else {
                     let reg1 = self.registers.allocate(reg_size.clone());
                     if reg1 != RegisterLabel::Rax
@@ -102,7 +110,12 @@ impl CodeGen {
                         reg::reg_size_to_str(reg_size.clone()),
                         rhs_offset
                     );
-                    println!("idiv dword [rbp-{}]", lhs_offset);
+                    if sitem.signed.is_some() && sitem.signed.unwrap() == true {
+                        println!("idiv dword [rbp-{}]", lhs_offset);
+                    } else {
+                        println!("div dword [rbp-{}]", lhs_offset);
+                    }
+                    self.registers.deallocate(reg1);
                 }
             }
             _ => unimplemented!(),
@@ -137,7 +150,8 @@ impl CodeGen {
     }
 
     fn process_var_decl(&mut self, decl: &VarDecl) {
-        self.var_table.push(decl.name.clone(), decl.dtype_size);
+        self.var_table
+            .push(decl.name.clone(), decl.dtype.size, decl.dtype.signed);
         self.dispatch(&decl.value);
     }
 

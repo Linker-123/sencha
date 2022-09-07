@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::ast::{BinaryOp, Node, UnaryOp};
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum TypeKind {
     Numeric,
     Float,
@@ -11,16 +11,69 @@ pub enum TypeKind {
     None,
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(Clone, Debug)]
 pub struct Type {
     pub name: String,
     pub size: usize,
     pub kind: TypeKind,
+    pub signed: Option<bool>,
 }
 
 impl Type {
-    pub fn new(name: String, size: usize, kind: TypeKind) -> Type {
-        Type { name, size, kind }
+    pub fn new(name: String, size: usize, kind: TypeKind, signed: Option<bool>) -> Type {
+        Type {
+            name,
+            size,
+            kind,
+            signed,
+        }
+    }
+}
+
+impl PartialEq for Type {
+    fn eq(&self, other: &Self) -> bool {
+        let mut signed_eq = false;
+        if self.signed.is_some() && other.signed.is_some() {
+            let signed_self = self.signed.unwrap();
+            let signed_other = other.signed.unwrap();
+            signed_eq = signed_self == signed_other;
+        }
+        self.name == other.name && self.size == other.size && self.kind == other.kind && signed_eq
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TaggedType {
+    pub size: usize,
+    pub kind: TypeKind,
+    pub signed: Option<bool>,
+}
+
+impl TaggedType {
+    pub fn new(size: usize, kind: TypeKind, signed: Option<bool>) -> TaggedType {
+        TaggedType { size, kind, signed }
+    }
+}
+
+impl Default for TaggedType {
+    fn default() -> Self {
+        TaggedType {
+            size: 0,
+            kind: TypeKind::None,
+            signed: None,
+        }
+    }
+}
+
+impl From<Type> for TaggedType {
+    fn from(t: Type) -> Self {
+        Self::new(t.size, t.kind, t.signed)
+    }
+}
+
+impl From<&Type> for TaggedType {
+    fn from(t: &Type) -> Self {
+        Self::new(t.size, t.kind, t.signed)
     }
 }
 
@@ -41,18 +94,58 @@ impl TypeContainer {
             created_locals: None,
         };
 
-        container.create_type(Type::new("i8".to_string(), 1, TypeKind::Numeric));
-        container.create_type(Type::new("u8".to_string(), 1, TypeKind::Numeric));
-        container.create_type(Type::new("i16".to_string(), 2, TypeKind::Numeric));
-        container.create_type(Type::new("u16".to_string(), 2, TypeKind::Numeric));
-        container.create_type(Type::new("i32".to_string(), 4, TypeKind::Numeric));
-        container.create_type(Type::new("u32".to_string(), 4, TypeKind::Numeric));
-        container.create_type(Type::new("f32".to_string(), 4, TypeKind::Float));
-        container.create_type(Type::new("i64".to_string(), 8, TypeKind::Numeric));
-        container.create_type(Type::new("u64".to_string(), 8, TypeKind::Numeric));
-        container.create_type(Type::new("f64".to_string(), 8, TypeKind::Float));
-        container.create_type(Type::new("bool".to_string(), 1, TypeKind::Bool));
-        container.create_type(Type::new("void".to_string(), 0, TypeKind::None));
+        container.create_type(Type::new(
+            "i8".to_string(),
+            1,
+            TypeKind::Numeric,
+            Some(true),
+        ));
+        container.create_type(Type::new(
+            "u8".to_string(),
+            1,
+            TypeKind::Numeric,
+            Some(false),
+        ));
+        container.create_type(Type::new(
+            "i16".to_string(),
+            2,
+            TypeKind::Numeric,
+            Some(true),
+        ));
+        container.create_type(Type::new(
+            "u16".to_string(),
+            2,
+            TypeKind::Numeric,
+            Some(false),
+        ));
+        container.create_type(Type::new(
+            "i32".to_string(),
+            4,
+            TypeKind::Numeric,
+            Some(true),
+        ));
+        container.create_type(Type::new(
+            "u32".to_string(),
+            4,
+            TypeKind::Numeric,
+            Some(false),
+        ));
+        container.create_type(Type::new("f32".to_string(), 4, TypeKind::Float, Some(true)));
+        container.create_type(Type::new(
+            "i64".to_string(),
+            8,
+            TypeKind::Numeric,
+            Some(true),
+        ));
+        container.create_type(Type::new(
+            "u64".to_string(),
+            8,
+            TypeKind::Numeric,
+            Some(false),
+        ));
+        container.create_type(Type::new("f64".to_string(), 8, TypeKind::Float, Some(true)));
+        container.create_type(Type::new("bool".to_string(), 1, TypeKind::Bool, None));
+        container.create_type(Type::new("void".to_string(), 0, TypeKind::None, None));
         container
     }
 
@@ -80,17 +173,17 @@ impl TypeContainer {
         match &mut **node {
             Node::Number(_, size, _, _) => {
                 let tipe = self.resolve_type(&"i32".to_string());
-                *size = tipe.size;
+                *size = (&tipe).into();
                 tipe
             }
             Node::Float(_, size, _, _) => {
                 let tipe = self.resolve_type(&"f64".to_string());
-                *size = tipe.size;
+                *size = (&tipe).into();
                 tipe
             }
             Node::BoolLiteral(_, size, _, _) => {
                 let tipe = self.resolve_type(&"bool".to_string());
-                *size = tipe.size;
+                *size = (&tipe).into();
                 tipe
             }
             Node::StringLiteral(literal, _, _) => {
@@ -98,6 +191,7 @@ impl TypeContainer {
                     "str".to_string(),
                     literal.len(),
                     TypeKind::Textual,
+                    None,
                 ));
                 self.resolve_type(&"str".to_string())
             }
@@ -127,13 +221,13 @@ impl TypeContainer {
                 }
             }
             Node::Function(func) => {
-                let ret_type = match &func.ret_type {
+                let ret_type = match &func.ret_type_str {
                     Some(str) => str.clone(),
                     None => "void".to_string(),
                 };
 
                 let tipe = self.resolve_type(&ret_type);
-                func.ret_size = tipe.size;
+                func.ret_type = (&tipe).into();
 
                 self.locals.insert(func.name.clone(), tipe.clone());
 
@@ -159,7 +253,7 @@ impl TypeContainer {
                 }
 
                 // If we got an explicit type
-                if let Some(ex_dt) = &decl.dtype {
+                if let Some(ex_dt) = &decl.dtype_str {
                     let ex_type = self.resolve_type(ex_dt);
 
                     if ex_type.kind == TypeKind::Numeric {
@@ -176,11 +270,11 @@ impl TypeContainer {
                         }
                     }
 
-                    decl.dtype_size = ex_type.size;
+                    decl.dtype = (&ex_type).into();
                     self.locals.insert(decl.name.clone(), ex_type.clone());
                     ex_type
                 } else {
-                    decl.dtype_size = val_type.size;
+                    decl.dtype = (&val_type).into();
                     self.locals.insert(decl.name.clone(), val_type.clone());
                     val_type
                 }
