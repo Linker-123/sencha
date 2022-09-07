@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use crate::ast::{BinaryOp, Node, UnaryOp};
+use crate::{
+    ast::{BinaryOp, Node, UnaryOp},
+    error,
+};
 
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub enum TypeKind {
@@ -157,7 +160,7 @@ impl TypeContainer {
         if let Some(tipe) = self.types.get(name) {
             tipe.clone()
         } else {
-            panic!("Undefined reference to type: {}", name)
+            error::panic(format!("Undefined reference to type: {}", name));
         }
     }
 
@@ -165,7 +168,7 @@ impl TypeContainer {
         if let Some(tipe) = self.locals.get(name) {
             tipe.clone()
         } else {
-            panic!("Undefined reference to variable: {}", name)
+            error::panic(format!("Undefined reference to variable: {}", name));
         }
     }
 
@@ -201,14 +204,14 @@ impl TypeContainer {
                 let r_type = self.check(&mut binary.rhs);
 
                 if l_type != r_type {
-                    panic!("Binary expression has invalid operands");
+                    error::panic_str("Binary expression has invalid operands");
                 }
 
                 match binary.op {
                     BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div => {
                         match l_type.kind {
                             TypeKind::Numeric => (),
-                            _ => panic!("Cannot do arithmetic on non-numeric types"),
+                            _ => error::panic_str("Cannot do arithmetic on non-numeric types"),
                         }
                         l_type
                     }
@@ -258,15 +261,21 @@ impl TypeContainer {
 
                     if ex_type.kind == TypeKind::Numeric {
                         if ex_type.kind != val_type.kind {
-                            panic!("Explicit variable type, doesn't equal the value type");
+                            error::panic_str(
+                                "Explicit variable type, doesn't equal the value type",
+                            );
                         }
                     } else if ex_type.kind == TypeKind::Float {
                         if ex_type.kind != val_type.kind {
-                            panic!("Explicit variable type, doesn't equal the value type");
+                            error::panic_str(
+                                "Explicit variable type, doesn't equal the value type",
+                            );
                         }
                     } else {
                         if ex_type != val_type {
-                            panic!("Explicit variable type, doesn't equal the value type");
+                            error::panic_str(
+                                "Explicit variable type, doesn't equal the value type",
+                            );
                         }
                     }
 
@@ -291,7 +300,7 @@ impl TypeContainer {
                 let r_type = self.check(&mut logical.rhs);
 
                 if l_type != r_type {
-                    panic!("Logical expression has invalid operands");
+                    error::panic_str("Logical expression has invalid operands");
                 }
 
                 l_type
@@ -302,15 +311,15 @@ impl TypeContainer {
 
                 if val_type.kind == TypeKind::Numeric {
                     if val_type.kind != local.kind {
-                        panic!("Original variable type, doesn't equal the value type");
+                        error::panic_str("Original variable type, doesn't equal the value type");
                     }
                 } else if val_type.kind == TypeKind::Float {
                     if val_type.kind != local.kind {
-                        panic!("Original variable type, doesn't equal the value type");
+                        error::panic_str("Original variable type, doesn't equal the value type");
                     }
                 } else {
                     if val_type != local {
-                        panic!("Original variable type, doesn't equal the value type");
+                        error::panic_str("Original variable type, doesn't equal the value type");
                     }
                 }
 
@@ -340,7 +349,7 @@ impl TypeContainer {
             Node::If(if_stmt) => {
                 let cond_type = self.check(&mut if_stmt.condition);
                 if cond_type != self.resolve_type(&"bool".to_string()) {
-                    panic!("If condition doesn't evaluate to a bool");
+                    error::panic_str("If condition doesn't evaluate to a bool");
                 }
 
                 self.check(&mut if_stmt.then_block);
