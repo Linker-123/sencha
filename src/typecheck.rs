@@ -146,7 +146,7 @@ impl TypeContainer {
             TypeKind::Numeric,
             Some(false),
         ));
-        container.create_type(Type::new("f64".to_string(), 8, TypeKind::Float, Some(true)));
+        container.create_type(Type::new("f64".to_string(), 16, TypeKind::Float, Some(true)));
         container.create_type(Type::new("bool".to_string(), 1, TypeKind::Bool, None));
         container.create_type(Type::new("void".to_string(), 0, TypeKind::None, None));
         container
@@ -210,7 +210,7 @@ impl TypeContainer {
                 match binary.op {
                     BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div => {
                         match l_type.kind {
-                            TypeKind::Numeric => (),
+                            TypeKind::Numeric | TypeKind::Float => (),
                             _ => error::panic_str("Cannot do arithmetic on non-numeric types"),
                         }
                         l_type

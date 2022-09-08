@@ -1,7 +1,6 @@
 use crate::{
     ast::{BinaryOp, Block, ExprStmt, Function, Node, VarDecl},
-    error,
-    reg::{self, RegisterLabel, RegisterManager},
+    reg::{self, RegisterManager},
     vartable::VarTable,
 };
 
@@ -95,13 +94,13 @@ impl CodeGen {
                     self.registers.deallocate(reg2);
                 } else {
                     let reg1 = self.registers.allocate(reg_size.clone());
-                    if reg1 != RegisterLabel::Rax
-                        && reg1 != RegisterLabel::Ax
-                        && reg1 != RegisterLabel::Eax
-                        && reg1 != RegisterLabel::Al
-                    {
-                        error::panic(format!("Allocated register is not an AX based"));
-                    }
+                    // if reg1 != RegisterLabel::Rax
+                    //     && reg1 != RegisterLabel::Ax
+                    //     && reg1 != RegisterLabel::Eax
+                    //     && reg1 != RegisterLabel::Al
+                    // {
+                    //     error::panic(format!("Allocated register is not an AX based"));
+                    // }
 
                     let reg1str = format!("{:#?}", reg1).to_lowercase();
                     println!(
