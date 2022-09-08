@@ -21,7 +21,7 @@ fn main() {
     let source = "
     func main {
         x := 10
-        y := &x
+        y := &x + 5
     }
     "
     .to_string();

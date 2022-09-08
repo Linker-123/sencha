@@ -146,7 +146,18 @@ impl TypeContainer {
             TypeKind::Numeric,
             Some(false),
         ));
-        container.create_type(Type::new("f64".to_string(), 16, TypeKind::Float, Some(true)));
+        container.create_type(Type::new(
+            "f64".to_string(),
+            16,
+            TypeKind::Float,
+            Some(true),
+        ));
+        container.create_type(Type::new(
+            "ptr".to_string(),
+            8,
+            TypeKind::Numeric,
+            Some(false),
+        ));
         container.create_type(Type::new("bool".to_string(), 1, TypeKind::Bool, None));
         container.create_type(Type::new("void".to_string(), 0, TypeKind::None, None));
         container
@@ -202,8 +213,13 @@ impl TypeContainer {
             Node::Binary(binary) => {
                 let l_type = self.check(&mut binary.lhs);
                 let r_type = self.check(&mut binary.rhs);
+                let ptr_type = self.resolve_type(&"ptr".to_string());
 
-                if l_type != r_type {
+                if l_type == ptr_type && r_type.kind != TypeKind::Numeric {
+                    error::panic_str("Cannot perform pointer arithmetic with non-numeric types");
+                } else if r_type == ptr_type && l_type.kind != TypeKind::Numeric {
+                    error::panic_str("Cannot perform pointer arithmetic with non-numeric types");
+                } else if l_type != r_type && l_type != ptr_type && r_type != ptr_type {
                     error::panic_str("Binary expression has invalid operands");
                 }
 
@@ -360,9 +376,7 @@ impl TypeContainer {
 
                 self.resolve_type(&"void".to_string())
             }
-            Node::GetPtr(_) => {
-                self.resolve_type(&"u64".to_string())
-            }
+            Node::GetPtr(_) => self.resolve_type(&"ptr".to_string()),
             _ => todo!(),
         }
     }
