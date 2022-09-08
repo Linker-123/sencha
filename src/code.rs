@@ -117,6 +117,29 @@ impl CodeGen {
                     self.registers.deallocate(reg1);
                 }
             }
+            Node::GetPtr(get_ptr) => {
+                self.dispatch(&get_ptr.expr);
+                let len = self.var_table.vstack.len();
+                let offset = len * 8;
+                let sitem = self.var_table.vstack.get(len - 1);
+                let reg_size = reg::size_to_reg_size(sitem.size);
+
+                let reg1 = self.registers.allocate(reg_size.clone());
+                let reg1_str = format!("{:#?}", reg1).to_lowercase();
+                println!(
+                    "lea {}, {} [rbp-{}]",
+                    reg1_str,
+                    reg::reg_size_to_str(reg_size.clone()),
+                    offset
+                );
+                println!(
+                    "mov {} [rbp-{}], {}",
+                    reg::reg_size_to_str(reg_size),
+                    offset,
+                    reg1_str
+                );
+                self.registers.deallocate(reg1);
+            }
             _ => unimplemented!(),
         }
     }
@@ -140,6 +163,7 @@ impl CodeGen {
 
             while self.var_table.items.len() > 0 && last.scope_level == self.var_table.scopes {
                 self.var_table.pop();
+                self.var_table.vstack.pop_item();
                 if self.var_table.items.len() > 0 {
                     last = self.var_table.back();
                 }

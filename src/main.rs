@@ -20,9 +20,8 @@ fn main() {
 
     let source = "
     func main {
-        x := 10.5;
-        y := 2.2;
-        z := x / y + 10.0 - 12.0;
+        x := 10
+        y := &x
     }
     "
     .to_string();

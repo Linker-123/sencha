@@ -1,6 +1,6 @@
 use crate::{
     ast::{
-        Assign, Binary, BinaryOp, Block, ExprStmt, For, Function, FunctionArg, If, Logical,
+        Assign, Binary, BinaryOp, Block, ExprStmt, For, Function, FunctionArg, GetPtr, If, Logical,
         LogicalOp, Node, Ret, Unary, UnaryOp, VarDecl,
     },
     tokenizer::{get_tok_len, get_tok_loc, TokenKind, Tokenizer},
@@ -503,7 +503,7 @@ impl<'a> Parser<'a> {
     }
 
     fn factor(&mut self) -> ParseResult<Box<Node>> {
-        let mut expr = self.unary()?;
+        let mut expr = self.get_ptr()?;
         loop {
             let bop;
 
@@ -515,10 +515,19 @@ impl<'a> Parser<'a> {
                 break;
             }
 
-            let right = self.unary()?;
+            let right = self.get_ptr()?;
             expr = Binary::new(expr, right, bop);
         }
         Ok(expr)
+    }
+
+    fn get_ptr(&mut self) -> ParseResult<Box<Node>> {
+        if matches!(self, self.current, TokenKind::GetPtr(_, _)) {
+            let expr = self.get_ptr()?;
+            Ok(GetPtr::new(expr))
+        } else {
+            self.unary()
+        }
     }
 
     fn unary(&mut self) -> ParseResult<Box<Node>> {

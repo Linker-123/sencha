@@ -40,6 +40,7 @@ pub enum Node {
     Ret(Ret),
     Block(Block),
     ExprStmt(ExprStmt),
+    GetPtr(GetPtr),
 }
 
 #[derive(PartialEq, Debug)]
@@ -294,5 +295,16 @@ pub struct ExprStmt {
 impl ExprStmt {
     pub fn new(expr: Box<Node>) -> Box<Node> {
         Box::new(Node::ExprStmt(ExprStmt { expr }))
+    }
+}
+
+#[derive(Debug)]
+pub struct GetPtr {
+    pub expr: Box<Node>,
+}
+
+impl GetPtr {
+    pub fn new(expr: Box<Node>) -> Box<Node> {
+        Box::new(Node::GetPtr(GetPtr { expr }))
     }
 }

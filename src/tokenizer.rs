@@ -39,6 +39,7 @@ pub enum TokenKind {
     Else(usize, usize),
     Var(usize, usize),
     ExprDelimiter(usize, usize),
+    GetPtr(usize, usize),
     Eof,
 }
 
@@ -83,6 +84,7 @@ pub fn get_tok_loc(token: &TokenKind) -> (usize, usize) {
         TokenKind::Else(a, b) => (*a, *b),
         TokenKind::Var(a, b) => (*a, *b),
         TokenKind::ExprDelimiter(a, b) => (*a, *b),
+        TokenKind::GetPtr(a, b) => (*a, *b),
         TokenKind::Eof => panic!("Unsupported token"),
     }
 }
@@ -128,6 +130,7 @@ pub fn get_tok_len(token: &TokenKind) -> usize {
         TokenKind::Else(_, _) => 4,
         TokenKind::Var(_, _) => 3,
         TokenKind::ExprDelimiter(_, _) => 1,
+        TokenKind::GetPtr(_, _) => 1,
         TokenKind::Eof => 0,
     }
 }
@@ -408,7 +411,7 @@ impl<'a> Iterator for Tokenizer<'a> {
             '&' => Some(if self.matches('&') {
                 TokenKind::And(self.line, self.column)
             } else {
-                return None;
+                TokenKind::GetPtr(self.line, self.column)
             }),
             ';' => Some(TokenKind::ExprDelimiter(self.line, self.column)),
             '\n' => {

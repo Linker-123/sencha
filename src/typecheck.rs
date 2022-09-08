@@ -360,6 +360,9 @@ impl TypeContainer {
 
                 self.resolve_type(&"void".to_string())
             }
+            Node::GetPtr(_) => {
+                self.resolve_type(&"u64".to_string())
+            }
             _ => todo!(),
         }
     }

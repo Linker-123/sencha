@@ -1,7 +1,7 @@
 #[derive(Debug, Clone)]
 pub struct StackItem {
     pub size: usize,
-    pub signed: Option<bool>
+    pub signed: Option<bool>,
 }
 
 impl StackItem {
@@ -32,5 +32,9 @@ impl VirtualStack {
 
     pub fn get(&self, idx: usize) -> StackItem {
         self.items[idx].clone()
+    }
+
+    pub fn pop_item(&mut self) {
+        self.items.pop();
     }
 }
