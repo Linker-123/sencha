@@ -5,14 +5,16 @@ pub struct VarItem {
     name: String,
     stack_offset: usize,
     pub scope_level: u32,
+    pub size: usize,
 }
 
 impl VarItem {
-    pub fn new(name: String, stack_offset: usize, scope_level: u32) -> VarItem {
+    pub fn new(name: String, stack_offset: usize, scope_level: u32, size: usize) -> VarItem {
         VarItem {
             name,
             stack_offset,
             scope_level,
+            size,
         }
     }
 }
@@ -43,14 +45,15 @@ impl VarTable {
 
     pub fn push(&mut self, name: String, size: usize, signed: Option<bool>) -> usize {
         let offset = self.vstack.push(size, signed);
-        self.items.push(VarItem::new(name, offset, self.scopes));
+        self.items
+            .push(VarItem::new(name, offset, self.scopes, size));
         offset
     }
 
-    pub fn find(&self, name: &String) -> usize {
+    pub fn find(&self, name: &String) -> (usize, usize) {
         for item in &self.items {
             if item.name == *name {
-                return item.stack_offset;
+                return (item.stack_offset, item.size);
             }
         }
         crate::error::panic(format!("Couldn't find stack offset for variable: {}", name));

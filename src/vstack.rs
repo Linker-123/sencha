@@ -22,7 +22,7 @@ impl VirtualStack {
 
     pub fn push(&mut self, size: usize, signed: Option<bool>) -> usize {
         self.items.push(StackItem::new(size, signed));
-        let offset = self.items.len() * 8;
+        let offset = self.items.len() * size;
         offset
     }
 

@@ -5,6 +5,7 @@ use code::CodeGen;
 use parser::Parser;
 use tokenizer::Tokenizer;
 
+mod asm;
 mod ast;
 mod code;
 mod error;
@@ -36,4 +37,5 @@ fn main() {
 
     let mut code_gen = CodeGen::new();
     code_gen.generate(&parser.declarations);
+    code_gen.write();
 }
