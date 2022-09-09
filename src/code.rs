@@ -135,6 +135,7 @@ impl CodeGen {
                             rhs_offset
                         ),
                     );
+                    self.label.cdq();
                     if sitem.signed.is_some() && sitem.signed.unwrap() == true {
                         self.label.idiv(format!("dword [rbp-{}]", lhs_offset));
                     } else {
