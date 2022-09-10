@@ -4,6 +4,8 @@ pub enum TokenKind {
     RightBrace(usize, usize),
     LeftParen(usize, usize),
     RightParen(usize, usize),
+    LeftBracket(usize, usize),
+    RightBracket(usize, usize),
     IntLiteral(String, usize, usize),
     FloatLiteral(String, usize, usize),
     StrLiteral(String, usize, usize),
@@ -85,6 +87,8 @@ pub fn get_tok_loc(token: &TokenKind) -> (usize, usize) {
         TokenKind::Var(a, b) => (*a, *b),
         TokenKind::ExprDelimiter(a, b) => (*a, *b),
         TokenKind::GetPtr(a, b) => (*a, *b),
+        TokenKind::LeftBracket(a, b) => (*a, *b),
+        TokenKind::RightBracket(a, b) => (*a, *b),
         TokenKind::Eof => panic!("Unsupported token"),
     }
 }
@@ -131,6 +135,8 @@ pub fn get_tok_len(token: &TokenKind) -> usize {
         TokenKind::Var(_, _) => 3,
         TokenKind::ExprDelimiter(_, _) => 1,
         TokenKind::GetPtr(_, _) => 1,
+        TokenKind::LeftBracket(_, _) => 1,
+        TokenKind::RightBracket(_, _) => 1,
         TokenKind::Eof => 0,
     }
 }
@@ -367,6 +373,8 @@ impl<'a> Iterator for Tokenizer<'a> {
             ')' => Some(TokenKind::RightParen(self.line, self.column)),
             '{' => Some(TokenKind::LeftBrace(self.line, self.column)),
             '}' => Some(TokenKind::RightBrace(self.line, self.column)),
+            '[' => Some(TokenKind::LeftBracket(self.line, self.column)),
+            ']' => Some(TokenKind::RightBracket(self.line, self.column)),
             ':' => Some(if self.matches('=') {
                 TokenKind::ColonEq(self.line, self.column)
             } else {

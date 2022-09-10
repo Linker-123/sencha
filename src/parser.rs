@@ -8,6 +8,12 @@ use crate::{
 use colored::Colorize;
 use log::error;
 
+enum ParserContext {
+    None,
+    ArrayParse(Option<u32>),
+    ArrayLiteral,
+}
+
 macro_rules! matches {
     ($self: ident, $($tts:tt)*) => {
         if std::matches!($($tts)*) {
@@ -33,6 +39,7 @@ pub struct Parser<'a> {
     tokenizer: Tokenizer<'a>,
     current: TokenKind,
     source: &'a String,
+    ctx: ParserContext,
     pub declarations: Vec<Box<Node>>,
 }
 
@@ -43,6 +50,7 @@ impl<'a> Parser<'a> {
             tokenizer,
             current,
             source,
+            ctx: ParserContext::None,
             declarations: Default::default(),
         }
     }
@@ -173,9 +181,30 @@ impl<'a> Parser<'a> {
         }
 
         self.advance();
+
+        if matches!(self, self.current, TokenKind::LeftBracket(_, _)) {
+            let size;
+            if let TokenKind::IntLiteral(t, _, _) = &self.current {
+                size = t.clone().parse::<u32>().unwrap();
+                self.advance();
+                self.ctx = ParserContext::ArrayParse(Some(size));
+            } else {
+                self.ctx = ParserContext::ArrayParse(None);
+            }
+
+            consume!(
+                self,
+                "expected ']'",
+                self.current,
+                TokenKind::RightBracket(_, _)
+            );
+        }
+
         consume!(self, "expected '='", self.current, TokenKind::Equal(_, _));
 
         let value = self.expr()?;
+
+        self.ctx = ParserContext::None;
         Ok(VarDecl::new(
             name,
             name_loc,
@@ -360,9 +389,17 @@ impl<'a> Parser<'a> {
     fn block(&mut self) -> ParseResult<Vec<Box<Node>>> {
         let mut statements: Vec<Box<Node>> = Vec::with_capacity(10);
         while !std::matches!(self.current, TokenKind::RightBrace(_, _)) && !self.is_at_end() {
-            let declaration = self.declaration()?;
-            if let Some(decl) = declaration {
-                statements.push(decl);
+            let declaration = self.declaration();
+            match declaration {
+                Ok(declaration) => {
+                    if let Some(decl) = declaration {
+                        statements.push(decl);
+                    }
+                }
+                Err(e) => {
+                    error!("{}", e);
+                    self.synchronize();
+                }
             }
         }
 
@@ -551,25 +588,79 @@ impl<'a> Parser<'a> {
     }
 
     fn primary(&mut self) -> ParseResult<Box<Node>> {
-        let node = match &self.current {
+        let node = match self.current.clone() {
             TokenKind::True(line, column) => {
-                Node::BoolLiteral(true, Default::default(), *line, *column)
+                Node::BoolLiteral(true, Default::default(), line, column)
             }
             TokenKind::False(line, column) => {
-                Node::BoolLiteral(false, Default::default(), *line, *column)
+                Node::BoolLiteral(false, Default::default(), line, column)
             }
             TokenKind::IntLiteral(integer, line, column) => {
-                Node::Number(integer.clone(), Default::default(), *line, *column)
+                Node::Number(integer.clone(), Default::default(), line, column)
             }
             TokenKind::FloatLiteral(float, line, column) => {
-                Node::Float(float.clone(), Default::default(), *line, *column)
+                Node::Float(float.clone(), Default::default(), line, column)
             }
             TokenKind::StrLiteral(string, line, column) => {
-                Node::StringLiteral(string.clone(), *line, *column)
+                Node::StringLiteral(string.clone(), line, column)
             }
             TokenKind::IdenLiteral(ident, line, column) => {
-                Node::VarGet(ident.clone(), *line, *column)
+                Node::VarGet(ident.clone(), line, column)
             }
+            TokenKind::LeftBrace(line, column) => match self.ctx {
+                ParserContext::ArrayParse(size) => {
+                    self.ctx = ParserContext::ArrayLiteral;
+                    let size = match size {
+                        Some(s) => s as usize,
+                        None => 0,
+                    };
+                    let mut items = Vec::with_capacity(size);
+
+                    self.advance();
+                    loop {
+                        let expr = self.expr()?;
+                        items.push(expr);
+
+                        if !matches!(self, self.current, TokenKind::Comma(_, _)) {
+                            break;
+                        }
+                    }
+
+                    consume!(
+                        self,
+                        "expected a '}'",
+                        self.current,
+                        TokenKind::RightBrace(_, _)
+                    );
+
+                    if size != 0 && items.len() != size {
+                        return Err(self.error(
+                            format!(
+                                "Declared array size is {} while the array literal size is {}",
+                                size,
+                                items.len()
+                            )
+                            .as_str(),
+                            &self.current,
+                        ));
+                    }
+
+                    if items.len() == 0 {
+                        return Err(self.error("Empty arrays are disallowed", &self.current));
+                    }
+
+                    Node::ArrayLiteral(items, Default::default(), line, column)
+                }
+                ParserContext::ArrayLiteral => {
+                    return Err(self.error("Nested arrays are not supported", &self.current));
+                }
+                ParserContext::None => {
+                    return Err(self.error(
+                        "can only use '{' in expressions where variable is an array",
+                        &self.current,
+                    ));
+                }
+            },
             _ => {
                 return Err(self.error("unexpected token", &self.current));
             }

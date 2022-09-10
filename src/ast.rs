@@ -25,6 +25,7 @@ pub enum Node {
     Float(String, TaggedType, usize, usize),
     StringLiteral(String, usize, usize),
     BoolLiteral(bool, TaggedType, usize, usize),
+    ArrayLiteral(Vec<Box<Node>>, TaggedType, usize, usize),
     VarGet(String, usize, usize),
     Binary(Binary),
     Function(Function),
@@ -124,6 +125,17 @@ impl Function {
 //         Box::new(Node::Call(Call { args, callee }))
 //     }
 // }
+
+#[derive(Debug)]
+pub struct ArrayVar {
+    pub size: u32,
+}
+
+impl ArrayVar {
+    pub fn new(size: u32) -> ArrayVar {
+        ArrayVar { size }
+    }
+}
 
 #[derive(Debug)]
 pub struct VarDecl {

@@ -83,15 +83,15 @@ impl From<&Type> for TaggedType {
 type TypeMap = HashMap<String, Type>;
 type LocalsMap = HashMap<String, Type>;
 
-pub struct TypeContainer {
+pub struct TypeCheck {
     types: TypeMap,
     locals: LocalsMap,
     created_locals: Option<Vec<String>>,
 }
 
-impl TypeContainer {
-    pub fn new() -> TypeContainer {
-        let mut container = TypeContainer {
+impl TypeCheck {
+    pub fn new() -> TypeCheck {
+        let mut container = TypeCheck {
             types: HashMap::new(),
             locals: HashMap::new(),
             created_locals: None,
@@ -200,6 +200,13 @@ impl TypeContainer {
                 *size = (&tipe).into();
                 tipe
             }
+            Node::ArrayLiteral(items, size, _, _) => {
+                let tipe = self.check(&mut items[0]);
+                *size = (&tipe).into();
+                size.size = size.size * items.len();
+
+                tipe
+            }
             Node::StringLiteral(literal, _, _) => {
                 self.create_type(Type::new(
                     "str".to_string(),
@@ -273,7 +280,7 @@ impl TypeContainer {
 
                 // If we got an explicit type
                 if let Some(ex_dt) = &decl.dtype_str {
-                    let ex_type = self.resolve_type(ex_dt);
+                    let mut ex_type = self.resolve_type(ex_dt);
 
                     if ex_type.kind == TypeKind::Numeric {
                         if ex_type.kind != val_type.kind {
@@ -295,6 +302,14 @@ impl TypeContainer {
                         }
                     }
 
+                    let mut array_size = 1;
+                    match &*decl.value {
+                        Node::ArrayLiteral(it, _, _, _) => array_size = it.len(),
+                        _ => (),
+                    }
+
+                    ex_type.size = ex_type.size * array_size;
+                    
                     decl.dtype = (&ex_type).into();
                     self.locals.insert(decl.name.clone(), ex_type.clone());
                     ex_type

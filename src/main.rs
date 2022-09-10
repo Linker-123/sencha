@@ -1,6 +1,6 @@
 extern crate lazy_static;
 
-use crate::typecheck::TypeContainer;
+use crate::typecheck::TypeCheck;
 use code::CodeGen;
 use parser::Parser;
 use tokenizer::Tokenizer;
@@ -21,8 +21,7 @@ fn main() {
 
     let source = "
     func main {
-        x := 10
-        y := &x + 5
+        var x: i32[] = {2, 2, 3};
     }
     "
     .to_string();
@@ -30,12 +29,14 @@ fn main() {
     let mut parser = Parser::new(tokenizer, &source);
     parser.parse();
 
-    let mut checker = TypeContainer::new();
+    let mut checker = TypeCheck::new();
     for decl in &mut parser.declarations {
         checker.check(decl);
     }
 
-    let mut code_gen = CodeGen::new();
-    code_gen.generate(&parser.declarations);
-    code_gen.write();
+    println!("{:#?}", parser.declarations);
+
+    // let mut code_gen = CodeGen::new();
+    // code_gen.generate(&parser.declarations);
+    // code_gen.write();
 }
