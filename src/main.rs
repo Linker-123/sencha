@@ -16,8 +16,9 @@ fn main() {
 
     let source = "
     func main {
-        x := 10 + 5;
-        z := x + 50 - 1;
+        x := 10 + 5
+        z := x + 50 - 1
+        z = 4210
     }
     "
     .to_string();
@@ -27,5 +28,5 @@ fn main() {
 
     let mut ssir = SSir::new();
     ssir.generate(&parser.declarations);
-
+    ssir.export();
 }

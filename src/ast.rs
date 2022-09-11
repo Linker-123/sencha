@@ -56,17 +56,53 @@ pub enum BinaryOp {
     NotEqual,
 }
 
-#[derive(PartialEq, Debug)]
+impl std::fmt::Display for BinaryOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Add => write!(f, "+"),
+            Self::Sub => write!(f, "-"),
+            Self::Mul => write!(f, "*"),
+            Self::Div => write!(f, "/"),
+            Self::Greater => write!(f, ">"),
+            Self::GreaterEq => write!(f, ">="),
+            Self::Less => write!(f, "<"),
+            Self::LessEq => write!(f, "<="),
+            Self::Equal => write!(f, "=="),
+            Self::NotEqual => write!(f, "!="),
+        }
+    }
+}
+
+#[derive(PartialEq, Debug, Clone)]
 pub enum LogicalOp {
     And,
     Or,
 }
 
-#[derive(PartialEq, Debug)]
+impl std::fmt::Display for LogicalOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::And => write!(f, "&&"),
+            Self::Or => write!(f, "||"),
+        }
+    }
+}
+
+#[derive(PartialEq, Debug, Clone)]
 pub enum UnaryOp {
     Not,
     Negate,
     None,
+}
+
+impl std::fmt::Display for UnaryOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Not => write!(f, "!"),
+            Self::Negate => write!(f, "-"),
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[derive(Debug)]
