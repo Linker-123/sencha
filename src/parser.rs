@@ -51,7 +51,7 @@ impl<'a> Parser<'a> {
             current,
             source,
             ctx: ParserContext::None,
-            declarations: Default::default(),
+            declarations: Vec::new(),
         }
     }
 
@@ -205,13 +205,7 @@ impl<'a> Parser<'a> {
         let value = self.expr()?;
 
         self.ctx = ParserContext::None;
-        Ok(VarDecl::new(
-            name,
-            name_loc,
-            Some(dtype),
-            Default::default(),
-            value,
-        ))
+        Ok(VarDecl::new(name, name_loc, Some(dtype), value))
     }
 
     fn implicit_var_decl(&mut self) -> ParseResult<Box<Node>> {
@@ -234,13 +228,7 @@ impl<'a> Parser<'a> {
         );
         let value = self.expr()?;
 
-        Ok(VarDecl::new(
-            name,
-            name_loc,
-            None,
-            Default::default(),
-            value,
-        ))
+        Ok(VarDecl::new(name, name_loc, None, value))
     }
 
     fn func_decl(&mut self) -> ParseResult<Box<Node>> {
@@ -318,7 +306,6 @@ impl<'a> Parser<'a> {
             name_loc,
             args,
             Block::new(body),
-            Default::default(),
             ret_type,
         ))
     }
@@ -589,17 +576,13 @@ impl<'a> Parser<'a> {
 
     fn primary(&mut self) -> ParseResult<Box<Node>> {
         let node = match self.current.clone() {
-            TokenKind::True(line, column) => {
-                Node::BoolLiteral(true, Default::default(), line, column)
-            }
-            TokenKind::False(line, column) => {
-                Node::BoolLiteral(false, Default::default(), line, column)
-            }
+            TokenKind::True(line, column) => Node::BoolLiteral(true, line, column),
+            TokenKind::False(line, column) => Node::BoolLiteral(false, line, column),
             TokenKind::IntLiteral(integer, line, column) => {
-                Node::Number(integer.clone(), Default::default(), line, column)
+                Node::Number(integer.clone(), line, column)
             }
             TokenKind::FloatLiteral(float, line, column) => {
-                Node::Float(float.clone(), Default::default(), line, column)
+                Node::Float(float.clone(), line, column)
             }
             TokenKind::StrLiteral(string, line, column) => {
                 Node::StringLiteral(string.clone(), line, column)
@@ -649,7 +632,7 @@ impl<'a> Parser<'a> {
                         return Err(self.error("Empty arrays are disallowed", &self.current));
                     }
 
-                    Node::ArrayLiteral(items, Default::default(), line, column)
+                    Node::ArrayLiteral(items, line, column)
                 }
                 ParserContext::ArrayLiteral => {
                     return Err(self.error("Nested arrays are not supported", &self.current));

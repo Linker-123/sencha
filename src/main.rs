@@ -1,27 +1,23 @@
 extern crate lazy_static;
 
-use crate::typecheck::TypeCheck;
-use code::CodeGen;
 use parser::Parser;
+use ssir::SSir;
 use tokenizer::Tokenizer;
 
-mod asm;
 mod ast;
-mod code;
-mod error;
 mod parser;
 mod reg;
+mod ssir;
 mod tokenizer;
-mod typecheck;
-mod vartable;
-mod vstack;
+mod error;
 
 fn main() {
     env_logger::init();
 
     let source = "
     func main {
-        var x: i32[] = {2, 2, 3};
+        x := 10 + 5;
+        z := x + 50 - 1;
     }
     "
     .to_string();
@@ -29,14 +25,7 @@ fn main() {
     let mut parser = Parser::new(tokenizer, &source);
     parser.parse();
 
-    let mut checker = TypeCheck::new();
-    for decl in &mut parser.declarations {
-        checker.check(decl);
-    }
+    let mut ssir = SSir::new();
+    ssir.generate(&parser.declarations);
 
-    println!("{:#?}", parser.declarations);
-
-    // let mut code_gen = CodeGen::new();
-    // code_gen.generate(&parser.declarations);
-    // code_gen.write();
 }
