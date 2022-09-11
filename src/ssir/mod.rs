@@ -1,7 +1,7 @@
 use crate::ast::Node;
 
 use self::{
-    ins::Instruction,
+    ins::{Function, Instruction, Label},
     tmp::{AssignTmp, BinaryTmp, LogicalTmp, TmpChild, TmpNode, UnaryTmp, ValueTmp},
 };
 
@@ -11,14 +11,20 @@ mod tmp;
 /// Secondary stage intermediate representation
 pub struct SSir {
     tmp_count: usize,
-    instructions: Vec<Instruction>,
+    functions: Vec<Function>,
+    func: Option<Function>,
+    label: Option<Label>,
+    label_count: usize,
 }
 
 impl SSir {
     pub fn new() -> SSir {
         SSir {
             tmp_count: 0,
-            instructions: Vec::new(),
+            functions: Vec::new(),
+            func: None,
+            label: None,
+            label_count: 0,
         }
     }
 
@@ -29,42 +35,94 @@ impl SSir {
     }
 
     pub fn export(&mut self) {
-        for ins in &self.instructions {
-            match ins {
-                Instruction::TmpNode(node) => {
-                    SSir::print_node(node);
+        for func in &self.functions {
+            println!("func {}:", func.name);
+            for ins in &func.instructions {
+                Self::print_instruction(ins);
+            }
+            for label in &func.labels {
+                println!("LC{}:", label.id);
+                for ins in &label.instructions {
+                    Self::print_instruction(ins);
                 }
-                Instruction::VarDecl(name, node) => {
-                    println!("{} := {}", name, node);
+            }
+        }
+    }
+
+    fn print_instruction(ins: &Instruction) {
+        match ins {
+            Instruction::TmpNode(node) => {
+                SSir::print_node(node);
+            }
+            Instruction::VarDecl(name, node) => {
+                println!("\t{} := {}", name, node);
+            }
+            Instruction::Pop => {
+                println!("\tpop");
+            }
+            Instruction::VarAssign(name, id) => {
+                println!("\t{} = {}", name, id);
+            }
+            Instruction::IfNot(cond, ealse) => {
+                println!("if NOT {}", cond);
+                if *ealse != 0 {
+                    println!("\tjump LC{}", ealse);
                 }
-                Instruction::Pop => {
-                    println!("pop");
-                }
-                Instruction::VarAssign(name, id) => {
-                    println!("{} = {}", name, id);
-                }
+                println!("else");
+            }
+            Instruction::Jump(jmp) => {
+                println!("\tjump LC{}", jmp);
             }
         }
     }
 
     fn print_node(node: &TmpNode) {
         match node {
-            TmpNode::ValueTmp(value) => println!("tmp{} = {}", value.id, value.value),
+            TmpNode::ValueTmp(value) => println!("\ttmp{} = {}", value.id, value.value),
             TmpNode::BinaryTmp(binary) => println!(
-                "tmp{} = {} {} {}",
+                "\ttmp{} = {} {} {}",
                 binary.id, binary.lhs, binary.op, binary.rhs
             ),
             TmpNode::LogicalTmp(logical) => println!(
-                "tmp{} = {} {} {}",
+                "\ttmp{} = {} {} {}",
                 logical.id, logical.lhs, logical.op, logical.rhs
             ),
-            TmpNode::UnaryTmp(unary) => println!("tmp{} = {} {}", unary.id, unary.op, unary.value),
-            TmpNode::AssignTmp(assign) => println!("tmp{} = {}", assign.id, assign.value),
+            TmpNode::UnaryTmp(unary) => {
+                println!("\ttmp{} = {} {}", unary.id, unary.op, unary.value)
+            }
+            TmpNode::AssignTmp(assign) => println!("\ttmp{} = {}", assign.id, assign.value),
+        }
+    }
+
+    fn add_func(&mut self, name: String) {
+        self.func = Some(Function::new(name));
+    }
+
+    fn add_label(&mut self) {
+        self.label_count += 1;
+        self.label = Some(Label::new(self.label_count));
+    }
+
+    fn end_func(&mut self) {
+        self.functions.push(self.func.take().unwrap());
+    }
+
+    fn end_label(&mut self) {
+        if let Some(f) = &mut self.func {
+            f.labels.push(self.label.take().unwrap());
+        } else {
+            panic!("Not compile a function.");
         }
     }
 
     fn add_ins(&mut self, ins: Instruction) {
-        self.instructions.push(ins);
+        if let Some(l) = &mut self.label {
+            l.add_ins(ins);
+        } else if let Some(f) = &mut self.func {
+            f.add_ins(ins);
+        } else {
+            panic!("Not compiling a function")
+        }
     }
 
     fn get_tmp_id(&mut self) -> usize {
@@ -76,7 +134,9 @@ impl SSir {
         match &**node {
             // Statements
             Node::Function(fun) => {
+                self.add_func(fun.name.clone());
                 self.process_node(&fun.body);
+                self.end_func();
 
                 TmpChild::None
             }
@@ -96,6 +156,24 @@ impl SSir {
                 self.process_node(&es.expr);
                 self.add_ins(Instruction::Pop);
 
+                TmpChild::None
+            }
+            Node::If(ief) => {
+                let cond = self.process_node(&ief.condition);
+
+                let mut else_loc: usize = 0;
+                if let Some(_) = &ief.else_block {
+                    else_loc = self.label_count + 1;
+                }
+
+                self.add_ins(Instruction::IfNot(cond, else_loc));
+                self.process_node(&ief.then_block);
+
+                if let Some(els) = &ief.else_block {
+                    self.add_label();
+                    self.process_node(els);
+                    self.end_label();
+                }
                 TmpChild::None
             }
             Node::Binary(bi) => {
