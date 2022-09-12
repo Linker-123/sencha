@@ -9,7 +9,7 @@ The parser and tokenizer part of this language are based on the http://craftingi
 `var x: i16 = 50`
 50 is considered an i32 but the variable's type is an i16 hence the 50 should be converted to an i16
 
-### Example 2:
+#### Example 2:
 ```
 var x: i16 = 10
 var y: i16 = 50 + x + 10
