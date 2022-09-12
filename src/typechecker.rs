@@ -42,6 +42,28 @@ impl PartialEq for Type {
     }
 }
 
+impl PartialOrd for Type {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.size.partial_cmp(&other.size)
+    }
+
+    fn gt(&self, other: &Self) -> bool {
+        self.size > other.size
+    }
+
+    fn lt(&self, other: &Self) -> bool {
+        self.size < other.size
+    }
+
+    fn ge(&self, other: &Self) -> bool {
+        self.size >= other.size
+    }
+
+    fn le(&self, other: &Self) -> bool {
+        self.size <= other.size
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct TaggedType {
     pub size: usize,
@@ -227,17 +249,18 @@ impl TypeCheck {
             }
             Node::VarGet(name, _, _) => self.resolve_local(name),
             Node::Binary(binary) => {
-                let l_type = self.check(&mut binary.lhs);
+                let mut l_type = self.check(&mut binary.lhs);
                 let r_type = self.check(&mut binary.rhs);
-                let ptr_type = self.resolve_type(&"ptr".to_string());
 
-                if l_type == ptr_type && r_type.kind != TypeKind::Numeric {
-                    error::panic_str("Cannot perform pointer arithmetic with non-numeric types");
-                } else if r_type == ptr_type && l_type.kind != TypeKind::Numeric {
-                    error::panic_str("Cannot perform pointer arithmetic with non-numeric types");
-                }// } else if l_type != r_type && l_type != ptr_type && r_type != ptr_type {
-                //     error::panic_str("Binary expression has invalid operands");
-                // }
+                if l_type != r_type {
+                    if l_type.kind != TypeKind::Numeric {
+                        error::panic_str("Binary operands are of different types");
+                    }
+
+                    if l_type < r_type {
+                        l_type = r_type.clone();
+                    }
+                }
 
                 match binary.op {
                     BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div => {
