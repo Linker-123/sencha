@@ -1,0 +1,29 @@
+func main:
+	i32(tmp1) = i32(10)+i32(5)
+	i32(x) := REF i32(tmp1)
+	i32(tmp2) = LOAD i32(x)
+	i32(tmp3) = REF i32(tmp2) + i32(50)
+	i32(tmp4) = REF i32(tmp3) - i32(1)
+	i32(z) := REF i32(tmp4)
+	i32(tmp5) = i32(4210)
+	i32(z) = REF i32(tmp5)
+	pop
+	i32(tmp6) = LOAD i32(z)
+	bool(tmp7) = REF i32(tmp6) == i32(4210)
+if NOT REF bool(tmp7)
+	jump LC1
+else
+	i32(tmp8) = i32(412983)
+	i32(z) = REF i32(tmp8)
+	pop
+	i32(tmp9) = LOAD i32(z)
+	bool(tmp10) = REF i32(tmp9) == i32(412983)
+if NOT REF tmp10
+else
+	i32(tmp11) = i32(532)
+	z = REF i32(tmp11)
+	pop
+LC1:
+	tmp12 = i32(230)
+	i32(x) = REF i32(tmp12)
+	pop

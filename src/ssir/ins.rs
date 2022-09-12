@@ -1,12 +1,13 @@
+use crate::typechecker::TaggedType;
+
 use super::tmp::{TmpChild, TmpNode};
 
 #[derive(Debug)]
 pub enum Instruction {
     TmpNode(TmpNode),
-    VarDecl(String, TmpChild),
+    VarDecl(String, TmpChild, TaggedType),
     VarAssign(String, TmpChild),
     IfNot(TmpChild, usize),
-    Jump(usize),
     Pop,
 }
 

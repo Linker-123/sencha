@@ -3,37 +3,34 @@ extern crate lazy_static;
 use parser::Parser;
 use ssir::SSir;
 use tokenizer::Tokenizer;
+use typechecker::TypeCheck;
 
 mod ast;
+mod error;
 mod parser;
 mod reg;
 mod ssir;
 mod tokenizer;
-mod error;
+mod typechecker;
 
 fn main() {
     env_logger::init();
 
     let source = "
     func main {
-        x := 10 + 5
-        z := x + 50 - 1
-        z = 4210
-
-        if z == 4210 {
-            z = 412983
-            if z == 412983 {
-                z = 532
-            }
-        } else {
-            x = 230
-        }
+        var z: i16 = 10
+        var x: i16 = 10 + z + 50
     }
     "
     .to_string();
     let tokenizer = Tokenizer::new(&source);
     let mut parser = Parser::new(tokenizer, &source);
     parser.parse();
+
+    let mut typecheck = TypeCheck::new();
+    for decl in &mut parser.declarations {
+        typecheck.check(decl);
+    }
 
     let mut ssir = SSir::new();
     ssir.generate(&parser.declarations);

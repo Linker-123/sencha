@@ -1,4 +1,4 @@
-use crate::ast::Node;
+use crate::ast::{Node, VarDecl};
 
 use self::{
     ins::{Function, Instruction, Label},
@@ -54,8 +54,8 @@ impl SSir {
             Instruction::TmpNode(node) => {
                 SSir::print_node(node);
             }
-            Instruction::VarDecl(name, node) => {
-                println!("\t{} := {}", name, node);
+            Instruction::VarDecl(name, node, size) => {
+                println!("\t{}{{{}}} := {}", size, name, node);
             }
             Instruction::Pop => {
                 println!("\tpop");
@@ -69,9 +69,6 @@ impl SSir {
                     println!("\tjump LC{}", ealse);
                 }
                 println!("else");
-            }
-            Instruction::Jump(jmp) => {
-                println!("\tjump LC{}", jmp);
             }
         }
     }
@@ -148,8 +145,8 @@ impl SSir {
             }
             Node::VarDecl(vd) => {
                 let tmp = self.process_node(&vd.value);
-                self.add_ins(Instruction::VarDecl(vd.name.clone(), tmp));
-
+                self.add_ins(Instruction::VarDecl(vd.name.clone(), tmp, vd.dtype.clone()));
+                
                 TmpChild::None
             }
             Node::ExprStmt(es) => {
@@ -229,9 +226,9 @@ impl SSir {
 
                 return TmpChild::TmpRef(id);
             }
-            Node::Number(n, _, _) => TmpChild::Literal(n.clone()),
-            Node::Float(f, _, _) => TmpChild::Literal(f.clone()),
-            Node::BoolLiteral(b, _, _) => TmpChild::Literal(b.to_string()),
+            Node::Number(n, size, _, _) => TmpChild::Literal(n.clone(), size.clone()),
+            Node::Float(f, size, _, _) => TmpChild::Literal(f.clone(), size.clone()),
+            Node::BoolLiteral(b, size, _, _) => TmpChild::Literal(b.to_string(), size.clone()),
             _ => {
                 println!("{:#?}", node);
                 unimplemented!()

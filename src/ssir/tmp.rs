@@ -1,8 +1,8 @@
-use crate::ast::{BinaryOp, LogicalOp, UnaryOp};
+use crate::{ast::{BinaryOp, LogicalOp, UnaryOp}, typechecker::TaggedType};
 
 #[derive(Debug)]
 pub enum TmpChild {
-    Literal(String),
+    Literal(String, TaggedType),
     LoadVar(String),
     TmpRef(usize),
     None,
@@ -11,7 +11,7 @@ pub enum TmpChild {
 impl std::fmt::Display for TmpChild {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Literal(l) => write!(f, "{}", l),
+            Self::Literal(l, size) => write!(f, "{}{{{}}}", size, l),
             Self::LoadVar(var) => write!(f, "LOAD {}", var),
             Self::TmpRef(tmp) => write!(f, "REF tmp{}", tmp),
             Self::None => unreachable!(),

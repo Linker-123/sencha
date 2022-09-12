@@ -1,3 +1,5 @@
+use crate::typechecker::TaggedType;
+
 #[derive(Debug)]
 pub struct FunctionArg {
     pub name: String,
@@ -19,11 +21,11 @@ impl FunctionArg {
 
 #[derive(Debug)]
 pub enum Node {
-    Number(String, usize, usize),
-    Float(String, usize, usize),
+    Number(String, TaggedType, usize, usize),
+    Float(String, TaggedType, usize, usize),
     StringLiteral(String, usize, usize),
-    BoolLiteral(bool, usize, usize),
-    ArrayLiteral(Vec<Box<Node>>, usize, usize),
+    BoolLiteral(bool, TaggedType, usize, usize),
+    ArrayLiteral(Vec<Box<Node>>, TaggedType, usize, usize),
     VarGet(String, usize, usize),
     Binary(Binary),
     Function(Function),
@@ -124,6 +126,7 @@ pub struct Function {
     pub loc: (usize, usize),
     pub args: Vec<FunctionArg>,
     pub body: Box<Node>,
+    pub ret_type: TaggedType,
     pub ret_type_str: Option<String>,
 }
 
@@ -133,6 +136,7 @@ impl Function {
         loc: (usize, usize),
         args: Vec<FunctionArg>,
         body: Box<Node>,
+        ret_type: TaggedType,
         ret_type_str: Option<String>,
     ) -> Box<Node> {
         Box::new(Node::Function(Function {
@@ -140,6 +144,7 @@ impl Function {
             loc,
             args,
             body,
+            ret_type,
             ret_type_str,
         }))
     }
@@ -173,6 +178,7 @@ pub struct VarDecl {
     pub name: String,
     pub name_loc: (usize, usize),
     pub dtype_str: Option<String>,
+    pub dtype: TaggedType,
     pub value: Box<Node>,
 }
 
@@ -181,6 +187,7 @@ impl VarDecl {
         name: String,
         name_loc: (usize, usize),
         dtype_str: Option<String>,
+        dtype: TaggedType,
         value: Box<Node>,
     ) -> Box<Node> {
         Box::new(Node::VarDecl(VarDecl {
@@ -188,6 +195,7 @@ impl VarDecl {
             name_loc,
             dtype_str,
             value,
+            dtype,
         }))
     }
 }
