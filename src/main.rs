@@ -18,7 +18,7 @@ fn main() {
 
     let source = "
     func main {
-        var z: i16 = 10
+        var z: i16 = 10 + 50
         var x: i16 = 10 + z + 50
     }
     "

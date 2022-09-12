@@ -4,7 +4,7 @@ use super::tmp::{TmpChild, TmpNode};
 
 #[derive(Debug)]
 pub enum Instruction {
-    TmpNode(TmpNode),
+    TmpNode(TmpNode, TaggedType),
     VarDecl(String, TmpChild, TaggedType),
     VarAssign(String, TmpChild),
     IfNot(TmpChild, usize),

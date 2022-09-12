@@ -3,17 +3,17 @@ use crate::{ast::{BinaryOp, LogicalOp, UnaryOp}, typechecker::TaggedType};
 #[derive(Debug)]
 pub enum TmpChild {
     Literal(String, TaggedType),
-    LoadVar(String),
-    TmpRef(usize),
+    LoadVar(String, TaggedType),
+    TmpRef(usize, TaggedType),
     None,
 }
 
 impl std::fmt::Display for TmpChild {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Literal(l, size) => write!(f, "{}{{{}}}", size, l),
-            Self::LoadVar(var) => write!(f, "LOAD {}", var),
-            Self::TmpRef(tmp) => write!(f, "REF tmp{}", tmp),
+            Self::Literal(l, tipe) => write!(f, "{}{{{}}}", tipe, l),
+            Self::LoadVar(var, tipe) => write!(f, "LOAD {}{{{}}}", tipe, var),
+            Self::TmpRef(tmp, tipe) => write!(f, "REF {}{{tmp{}}}", tipe, tmp),
             Self::None => unreachable!(),
         }
     }
@@ -34,11 +34,12 @@ pub struct BinaryTmp {
     pub rhs: TmpChild,
     pub op: BinaryOp,
     pub id: usize,
+    pub tipe: TaggedType,
 }
 
 impl BinaryTmp {
-    pub fn new(lhs: TmpChild, rhs: TmpChild, op: BinaryOp, id: usize) -> BinaryTmp {
-        BinaryTmp { lhs, rhs, op, id }
+    pub fn new(lhs: TmpChild, rhs: TmpChild, op: BinaryOp, id: usize, tipe: TaggedType) -> BinaryTmp {
+        BinaryTmp { lhs, rhs, op, id, tipe }
     }
 }
 
