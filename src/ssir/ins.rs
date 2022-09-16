@@ -6,7 +6,7 @@ use super::tmp::{TmpChild, TmpNode};
 pub enum Instruction {
     TmpNode(TmpNode, TaggedType),
     VarDecl(String, TmpChild, TaggedType),
-    VarAssign(String, TmpChild),
+    VarAssign(String, TmpChild, TaggedType),
     IfNot(TmpChild, usize),
     Pop,
 }

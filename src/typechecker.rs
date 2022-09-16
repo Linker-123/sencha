@@ -101,13 +101,21 @@ impl From<&Type> for TaggedType {
 
 impl std::fmt::Display for TaggedType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let signed = self.signed.unwrap_or(false);
-        if signed {
-            write!(f, "i")?;
-        } else {
-            write!(f, "u")?;
+        match self.kind {
+            TypeKind::Numeric => {
+                let signed = self.signed.unwrap_or(false);
+                if signed {
+                    write!(f, "i")?;
+                } else {
+                    write!(f, "u")?;
+                }
+                write!(f, "{}", self.size * 8)
+            }
+            TypeKind::Bool => {
+                write!(f, "bool")
+            }
+            _ => unimplemented!()
         }
-        write!(f, "{}", self.size * 8)
     }
 }
 

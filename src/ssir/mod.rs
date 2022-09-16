@@ -1,4 +1,7 @@
-use crate::{ast::Node, typechecker::TaggedType};
+use crate::{
+    ast::{BinaryOp, Node},
+    typechecker::{TaggedType, TypeKind},
+};
 
 use self::{
     ins::{Function, Instruction, Label},
@@ -64,15 +67,15 @@ impl SSir {
             Instruction::Pop => {
                 println!("\tpop");
             }
-            Instruction::VarAssign(name, id) => {
-                println!("\t{} = {}", name, id);
+            Instruction::VarAssign(name, id, tipe) => {
+                println!("\t{}{{{}}} = {}", tipe, name, id);
             }
             Instruction::IfNot(cond, ealse) => {
-                println!("if NOT {}", cond);
+                println!("\tif not {}", cond);
                 if *ealse != 0 {
                     println!("\tjump LC{}", ealse);
                 }
-                println!("else");
+                println!("\telse");
             }
         }
     }
@@ -200,6 +203,13 @@ impl SSir {
                 let rhs = self.process_node(&bi.rhs);
 
                 let lhs_type = Self::get_child_type(&lhs);
+                let res_type = match bi.op {
+                    BinaryOp::Add | BinaryOp::Div | BinaryOp::Mul | BinaryOp::Sub => {
+                        lhs_type.clone()
+                    }
+                    _ => TaggedType::new(1, TypeKind::Bool, None),
+                };
+
                 let id = self.get_tmp_id();
                 self.add_ins(Instruction::TmpNode(
                     TmpNode::BinaryTmp(BinaryTmp::new(
@@ -209,10 +219,10 @@ impl SSir {
                         id,
                         lhs_type.clone(),
                     )),
-                    lhs_type.clone(),
+                    res_type.clone(),
                 ));
 
-                return TmpChild::TmpRef(id, lhs_type);
+                return TmpChild::TmpRef(id, res_type.clone());
             }
             Node::VarGet(name, _, _) => {
                 let id = self.get_tmp_id();
@@ -262,6 +272,7 @@ impl SSir {
                 self.add_ins(Instruction::VarAssign(
                     asi.name.clone(),
                     TmpChild::TmpRef(id, ttype.clone()),
+                    ttype.clone(),
                 ));
 
                 return TmpChild::TmpRef(id, ttype);

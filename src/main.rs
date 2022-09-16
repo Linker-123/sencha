@@ -17,6 +17,13 @@ fn main() {
     env_logger::init();
 
     let source = "
+    func test {
+        var x: i16 = 41023;
+        if x == true {
+            x = 124;
+        }
+    }
+
     func main {
         var z: i16 = 10 + 50
         var x: i16 = 10 + z + 50
