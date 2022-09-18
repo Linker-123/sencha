@@ -47,11 +47,11 @@ impl RegisterLabeler {
 
     fn process_ins(
         &mut self,
-        node: &TmpNode,
+        node: &mut TmpNode,
         tipe: &TaggedType,
         label: &mut Option<RegisterLabel>,
     ) {
-        match &node {
+        match node {
             TmpNode::ValueTmp(val) => {
                 let register = self.rmgr.allocate(reg::size_to_reg_size(tipe.size));
                 *label = Some(register.clone());
@@ -59,19 +59,22 @@ impl RegisterLabeler {
                 self.ref_table.insert(val.id, register);
             }
             TmpNode::BinaryTmp(binary) => {
-                let mut id: Option<usize> = None;
-
-                if let TmpChild::TmpRef(ref_id, _) = &binary.lhs {
-                    id = Some(ref_id.clone());
-                } else if let TmpChild::TmpRef(ref_id, _) = &binary.rhs {
-                    id = Some(ref_id.clone());
+                let mut tmp_ref = false;
+                if let TmpChild::TmpRef(ref_id, _, llabel) = &mut binary.lhs {
+                    let reg = self.resolve_reg(ref_id.clone());
+                    *label = Some(reg.clone());
+                    *llabel = Some(reg.clone());
+                    self.ref_table.insert(binary.id, reg);
+                    tmp_ref = true;
+                } else if let TmpChild::TmpRef(ref_id, _, rlabel) = &mut binary.rhs {
+                    let reg = self.resolve_reg(ref_id.clone());
+                    *label = Some(reg.clone());
+                    *rlabel = Some(reg.clone());
+                    self.ref_table.insert(binary.id, reg);
+                    tmp_ref = true;
                 }
 
-                if let Some(id) = id {
-                    let reg = self.resolve_reg(id);
-                    *label = Some(reg.clone());
-                    self.ref_table.insert(binary.id, reg);
-                } else {
+                if !tmp_ref {
                     let register = self.rmgr.allocate(reg::size_to_reg_size(tipe.size));
                     *label = Some(register.clone());
                     self.ref_table.insert(binary.id, register);

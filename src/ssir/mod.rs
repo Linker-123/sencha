@@ -107,7 +107,7 @@ pub fn get_child_type(child: &TmpChild) -> TaggedType {
     match child {
         TmpChild::Literal(_, tipe) => tipe.clone(),
         TmpChild::LoadVar(_, tipe) => tipe.clone(),
-        TmpChild::TmpRef(_, tipe) => tipe.clone(),
+        TmpChild::TmpRef(_, tipe, _) => tipe.clone(),
         _ => panic!("No tagged type for tmp child"),
     }
 }
@@ -255,7 +255,7 @@ impl SSir {
                     None,
                 ));
 
-                return TmpChild::TmpRef(id, res_type.clone());
+                return TmpChild::TmpRef(id, res_type.clone(), None);
             }
             Node::VarGet(name, _, _) => {
                 let id = self.get_tmp_id();
@@ -269,7 +269,7 @@ impl SSir {
                     None,
                 ));
 
-                return TmpChild::TmpRef(id, var.tagged_type.clone());
+                return TmpChild::TmpRef(id, var.tagged_type.clone(), None);
             }
             Node::Unary(un) => {
                 let id = self.get_tmp_id();
@@ -282,7 +282,7 @@ impl SSir {
                     None,
                 ));
 
-                return TmpChild::TmpRef(id, ttype);
+                return TmpChild::TmpRef(id, ttype, None);
             }
             Node::Logical(lg) => {
                 let id = self.get_tmp_id();
@@ -296,7 +296,7 @@ impl SSir {
                     None,
                 ));
 
-                return TmpChild::TmpRef(id, ttype);
+                return TmpChild::TmpRef(id, ttype, None);
             }
             Node::Assign(asi) => {
                 let id = self.get_tmp_id();
@@ -311,11 +311,11 @@ impl SSir {
                 ));
                 self.add_ins(Instruction::VarAssign(
                     asi.name.clone(),
-                    TmpChild::TmpRef(id, ttype.clone()),
+                    TmpChild::TmpRef(id, ttype.clone(), None),
                     ttype.clone(),
                 ));
 
-                return TmpChild::TmpRef(id, ttype);
+                return TmpChild::TmpRef(id, ttype, None);
             }
             Node::Number(n, size, _, _) => TmpChild::Literal(n.clone(), size.clone()),
             Node::Float(f, size, _, _) => TmpChild::Literal(f.clone(), size.clone()),
