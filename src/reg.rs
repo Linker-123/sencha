@@ -91,6 +91,13 @@ pub enum RegisterLabel {
     R15b,
 }
 
+impl std::fmt::Display for RegisterLabel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str_reg = format!("{:#?}", self);
+        write!(f, "{}", str_reg.to_lowercase())
+    }
+}
+
 pub struct Register {
     label: RegisterLabel,
     size: RegisterSize,
@@ -209,6 +216,7 @@ impl RegisterManager {
         ))
     }
 
+    #[allow(dead_code)]
     pub fn deallocate(&mut self, label: RegisterLabel) {
         for reg in &mut self.registers {
             if reg.used && reg.label == label {
@@ -221,6 +229,14 @@ impl RegisterManager {
             "Tried to deallocate a non-used register: {:#?}",
             label
         ))
+    }
+
+    pub fn deallocate_all(&mut self) {
+        for reg in &mut self.registers {
+            if reg.used {
+                reg.used = false;
+            }
+        }
     }
 
     #[allow(dead_code)]
@@ -252,6 +268,7 @@ pub fn size_to_reg_size(bytes: usize) -> RegisterSize {
     }
 }
 
+#[allow(dead_code)]
 pub fn reg_size_to_str(size: RegisterSize) -> &'static str {
     match size {
         RegisterSize::Byte => "byte",

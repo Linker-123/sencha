@@ -1,7 +1,7 @@
 extern crate lazy_static;
 
 use parser::Parser;
-use ssir::SSir;
+use ssir::{print_functions, transform::RegisterLabeler, SSir};
 use tokenizer::Tokenizer;
 use typechecker::TypeCheck;
 
@@ -17,16 +17,8 @@ fn main() {
     env_logger::init();
 
     let source = "
-    func test {
-        var x: i16 = 41023;
-        if x == true {
-            x = 124;
-        }
-    }
-
     func main {
-        var z: i16 = 10 + 50
-        var x: i16 = 10 + z + 50
+        x := 5 + 5 + 10 - 1
     }
     "
     .to_string();
@@ -41,5 +33,10 @@ fn main() {
 
     let mut ssir = SSir::new();
     ssir.generate(&parser.declarations);
-    ssir.export();
+
+    drop(parser);
+
+    let mut labeler = RegisterLabeler::new();
+    let functions = labeler.assign_labels(ssir.get_functions());
+    print_functions(&functions);
 }

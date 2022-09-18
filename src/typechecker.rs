@@ -64,7 +64,7 @@ impl PartialOrd for Type {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TaggedType {
     pub size: usize,
     pub kind: TypeKind,

@@ -1,5 +1,6 @@
 use crate::{
     ast::{BinaryOp, Node},
+    reg::RegisterLabel,
     typechecker::{TaggedType, TypeKind},
 };
 
@@ -11,7 +12,105 @@ use self::{
 
 mod ins;
 mod tmp;
+pub mod transform;
 mod var_table;
+
+fn print_instruction(ins: &Instruction) {
+    match ins {
+        Instruction::TmpNode(node, tipe, label) => {
+            print_node(node, tipe, label);
+        }
+        Instruction::VarDecl(name, node, size) => {
+            println!("\t{}{{{}}} := {}", size, name, node);
+        }
+        Instruction::Pop => {
+            println!("\tpop");
+        }
+        Instruction::VarAssign(name, id, tipe) => {
+            println!("\t{}{{{}}} = {}", tipe, name, id);
+        }
+        Instruction::IfNot(cond, ealse) => {
+            println!("\tif not {}", cond);
+            if *ealse != 0 {
+                println!("\tjump LC{}", ealse);
+            }
+            println!("\telse");
+        }
+    }
+}
+
+fn print_node(node: &TmpNode, tipe: &TaggedType, label: &Option<RegisterLabel>) {
+    match node {
+        TmpNode::ValueTmp(value) => println!(
+            "\t{} -> {}{{tmp{}}} = {}",
+            label.as_ref().unwrap(),
+            tipe,
+            value.id,
+            value.value
+        ),
+        TmpNode::BinaryTmp(binary) => println!(
+            "\t{} -> {}{{tmp{}}} = {} {} {}",
+            label.as_ref().unwrap(),
+            tipe,
+            binary.id,
+            binary.lhs,
+            binary.op,
+            binary.rhs
+        ),
+        TmpNode::LogicalTmp(logical) => println!(
+            "\t{} -> {}{{tmp{}}} = {} {} {}",
+            label.as_ref().unwrap(),
+            tipe,
+            logical.id,
+            logical.lhs,
+            logical.op,
+            logical.rhs
+        ),
+        TmpNode::UnaryTmp(unary) => {
+            println!(
+                "\t{} -> {}{{tmp{}}} = {} {}",
+                label.as_ref().unwrap(),
+                tipe,
+                unary.id,
+                unary.op,
+                unary.value
+            )
+        }
+        TmpNode::AssignTmp(assign) => {
+            println!(
+                "\t{} -> {}{{tmp{}}} = {}",
+                label.as_ref().unwrap(),
+                tipe,
+                assign.id,
+                assign.value
+            )
+        }
+    }
+}
+
+pub fn print_functions(functions: &Vec<Function>) {
+    for func in functions {
+        println!("func {}:", func.name);
+        for ins in &func.instructions {
+            print_instruction(ins);
+        }
+        for label in &func.labels {
+            println!("LC{}:", label.id);
+            for ins in &label.instructions {
+                print_instruction(ins);
+            }
+        }
+    }
+}
+
+pub fn get_child_type(child: &TmpChild) -> TaggedType {
+    match child {
+        TmpChild::Literal(_, tipe) => tipe.clone(),
+        TmpChild::LoadVar(_, tipe) => tipe.clone(),
+        TmpChild::TmpRef(_, tipe) => tipe.clone(),
+        _ => panic!("No tagged type for tmp child"),
+    }
+}
 
 /// Secondary stage intermediate representation
 pub struct SSir {
@@ -41,66 +140,8 @@ impl SSir {
         }
     }
 
-    pub fn export(&mut self) {
-        for func in &self.functions {
-            println!("func {}:", func.name);
-            for ins in &func.instructions {
-                Self::print_instruction(ins);
-            }
-            for label in &func.labels {
-                println!("LC{}:", label.id);
-                for ins in &label.instructions {
-                    Self::print_instruction(ins);
-                }
-            }
-        }
-    }
-
-    fn print_instruction(ins: &Instruction) {
-        match ins {
-            Instruction::TmpNode(node, tipe) => {
-                SSir::print_node(node, tipe);
-            }
-            Instruction::VarDecl(name, node, size) => {
-                println!("\t{}{{{}}} := {}", size, name, node);
-            }
-            Instruction::Pop => {
-                println!("\tpop");
-            }
-            Instruction::VarAssign(name, id, tipe) => {
-                println!("\t{}{{{}}} = {}", tipe, name, id);
-            }
-            Instruction::IfNot(cond, ealse) => {
-                println!("\tif not {}", cond);
-                if *ealse != 0 {
-                    println!("\tjump LC{}", ealse);
-                }
-                println!("\telse");
-            }
-        }
-    }
-
-    fn print_node(node: &TmpNode, tipe: &TaggedType) {
-        match node {
-            TmpNode::ValueTmp(value) => println!("\t{}{{tmp{}}} = {}", tipe, value.id, value.value),
-            TmpNode::BinaryTmp(binary) => println!(
-                "\t{}{{tmp{}}} = {} {} {}",
-                tipe, binary.id, binary.lhs, binary.op, binary.rhs
-            ),
-            TmpNode::LogicalTmp(logical) => println!(
-                "\t{}{{tmp{}}} = {} {} {}",
-                tipe, logical.id, logical.lhs, logical.op, logical.rhs
-            ),
-            TmpNode::UnaryTmp(unary) => {
-                println!(
-                    "\t{}{{tmp{}}} = {} {}",
-                    tipe, unary.id, unary.op, unary.value
-                )
-            }
-            TmpNode::AssignTmp(assign) => {
-                println!("\t{}{{tmp{}}} = {}", tipe, assign.id, assign.value)
-            }
-        }
+    pub fn get_functions(self) -> Vec<Function> {
+        self.functions
     }
 
     fn add_func(&mut self, name: String) {
@@ -137,15 +178,6 @@ impl SSir {
     fn get_tmp_id(&mut self) -> usize {
         self.tmp_count += 1;
         self.tmp_count
-    }
-
-    fn get_child_type(child: &TmpChild) -> TaggedType {
-        match child {
-            TmpChild::Literal(_, tipe) => tipe.clone(),
-            TmpChild::LoadVar(_, tipe) => tipe.clone(),
-            TmpChild::TmpRef(_, tipe) => tipe.clone(),
-            _ => panic!("No tagged type for tmp child"),
-        }
     }
 
     fn process_node(&mut self, node: &Box<Node>) -> TmpChild {
@@ -202,7 +234,7 @@ impl SSir {
                 let lhs = self.process_node(&bi.lhs);
                 let rhs = self.process_node(&bi.rhs);
 
-                let lhs_type = Self::get_child_type(&lhs);
+                let lhs_type = get_child_type(&lhs);
                 let res_type = match bi.op {
                     BinaryOp::Add | BinaryOp::Div | BinaryOp::Mul | BinaryOp::Sub => {
                         lhs_type.clone()
@@ -220,6 +252,7 @@ impl SSir {
                         lhs_type.clone(),
                     )),
                     res_type.clone(),
+                    None,
                 ));
 
                 return TmpChild::TmpRef(id, res_type.clone());
@@ -233,6 +266,7 @@ impl SSir {
                         id,
                     )),
                     var.tagged_type.clone(),
+                    None,
                 ));
 
                 return TmpChild::TmpRef(id, var.tagged_type.clone());
@@ -240,9 +274,13 @@ impl SSir {
             Node::Unary(un) => {
                 let id = self.get_tmp_id();
                 let value = self.process_node(&un.expr);
-                let ttype = Self::get_child_type(&value);
+                let ttype = get_child_type(&value);
                 let utmp = UnaryTmp::new(value, un.op.clone(), id);
-                self.add_ins(Instruction::TmpNode(TmpNode::UnaryTmp(utmp), ttype.clone()));
+                self.add_ins(Instruction::TmpNode(
+                    TmpNode::UnaryTmp(utmp),
+                    ttype.clone(),
+                    None,
+                ));
 
                 return TmpChild::TmpRef(id, ttype);
             }
@@ -250,11 +288,12 @@ impl SSir {
                 let id = self.get_tmp_id();
                 let lhs = self.process_node(&lg.lhs);
                 let rhs = self.process_node(&lg.rhs);
-                let ttype = Self::get_child_type(&lhs);
+                let ttype = get_child_type(&lhs);
                 let ltmp = LogicalTmp::new(lhs, rhs, lg.op.clone(), id);
                 self.add_ins(Instruction::TmpNode(
                     TmpNode::LogicalTmp(ltmp),
                     ttype.clone(),
+                    None,
                 ));
 
                 return TmpChild::TmpRef(id, ttype);
@@ -262,12 +301,13 @@ impl SSir {
             Node::Assign(asi) => {
                 let id = self.get_tmp_id();
                 let value = self.process_node(&asi.value);
-                let ttype = Self::get_child_type(&value);
+                let ttype = get_child_type(&value);
                 let atmp = AssignTmp::new(value, id);
 
                 self.add_ins(Instruction::TmpNode(
                     TmpNode::AssignTmp(atmp),
                     ttype.clone(),
+                    None,
                 ));
                 self.add_ins(Instruction::VarAssign(
                     asi.name.clone(),

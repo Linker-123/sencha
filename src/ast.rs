@@ -163,17 +163,6 @@ impl Function {
 // }
 
 #[derive(Debug)]
-pub struct ArrayVar {
-    pub size: u32,
-}
-
-impl ArrayVar {
-    pub fn new(size: u32) -> ArrayVar {
-        ArrayVar { size }
-    }
-}
-
-#[derive(Debug)]
 pub struct VarDecl {
     pub name: String,
     pub name_loc: (usize, usize),

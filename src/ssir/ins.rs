@@ -1,16 +1,17 @@
 use crate::typechecker::TaggedType;
-
+use crate::reg::RegisterLabel;
 use super::tmp::{TmpChild, TmpNode};
 
 #[derive(Debug)]
 pub enum Instruction {
-    TmpNode(TmpNode, TaggedType),
+    TmpNode(TmpNode, TaggedType, Option<RegisterLabel>),
     VarDecl(String, TmpChild, TaggedType),
     VarAssign(String, TmpChild, TaggedType),
     IfNot(TmpChild, usize),
     Pop,
 }
 
+#[derive(Debug)]
 pub struct Label {
     pub instructions: Vec<Instruction>,
     pub id: usize,
@@ -29,6 +30,7 @@ impl Label {
     }
 }
 
+#[derive(Debug)]
 pub struct Function {
     pub instructions: Vec<Instruction>,
     pub labels: Vec<Label>,
@@ -48,6 +50,7 @@ impl Function {
         self.instructions.push(ins);
     }
 
+    #[allow(dead_code)]
     pub fn add_label(&mut self, label: Label) {
         self.labels.push(label);
     }
