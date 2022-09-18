@@ -67,7 +67,6 @@ impl RegisterLabeler {
                     id = Some(ref_id.clone());
                 }
 
-                println!("{:#?} table: {:#?}", id, self.ref_table);
                 if let Some(id) = id {
                     let reg = self.resolve_reg(id);
                     *label = Some(reg.clone());
