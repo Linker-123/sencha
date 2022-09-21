@@ -203,6 +203,7 @@ impl SSir {
                 self.add_ins(Instruction::VarDecl(vd.name.clone(), tmp, vd.dtype.clone()));
                 self.variables
                     .add_var(Variable::new(vd.name.clone(), vd.dtype.clone()));
+                self.add_ins(Instruction::Pop);
 
                 TmpChild::None
             }
@@ -228,6 +229,8 @@ impl SSir {
                     self.process_node(els);
                     self.end_label();
                 }
+
+                self.add_ins(Instruction::Pop);
                 TmpChild::None
             }
             Node::Binary(bi) => {

@@ -18,7 +18,8 @@ fn main() {
 
     let source = "
     func main {
-        x := 5 + 5 + 10 - 1
+        var x: u64 = 9238912389 + 57348738478278
+        var y: u64 = x + x
     }
     "
     .to_string();

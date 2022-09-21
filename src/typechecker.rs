@@ -1,8 +1,11 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    num::{ParseFloatError, ParseIntError},
+};
 
 use crate::{
     ast::{BinaryOp, Node, UnaryOp},
-    error,
+    error::{self},
 };
 
 #[derive(PartialEq, Clone, Copy, Debug)]
@@ -114,9 +117,23 @@ impl std::fmt::Display for TaggedType {
             TypeKind::Bool => {
                 write!(f, "bool")
             }
-            _ => unimplemented!()
+            _ => unimplemented!(),
         }
     }
+}
+
+fn bad_int(err: ParseIntError, literal: String, type_name: &'static str) -> ! {
+    error::panic(format!(
+        "Failed to parse {} as an {} because {}",
+        literal, type_name, err
+    ))
+}
+
+fn bad_float(err: ParseFloatError, literal: String, type_name: &'static str) -> ! {
+    error::panic(format!(
+        "Failed to parse {} as an {} because {}",
+        literal, type_name, err
+    ))
 }
 
 type TypeMap = HashMap<String, Type>;
@@ -219,6 +236,90 @@ impl TypeCheck {
             tipe.clone()
         } else {
             error::panic(format!("Undefined reference to variable: {}", name));
+        }
+    }
+
+    fn overwrite_type(&mut self, node: &mut Box<Node>, new_type: &Type) {
+        match &mut **node {
+            Node::Number(literal, size, _, _) => {
+                *size = new_type.into();
+
+                match new_type.name.as_str() {
+                    "u8" => {
+                        literal
+                            .parse::<u8>()
+                            .unwrap_or_else(|err| bad_int(err, literal.clone(), "u8"));
+                    }
+                    "i8" => {
+                        literal
+                            .parse::<i8>()
+                            .unwrap_or_else(|err| bad_int(err, literal.clone(), "i8"));
+                    }
+                    "u16" => {
+                        literal
+                            .parse::<u16>()
+                            .unwrap_or_else(|err| bad_int(err, literal.clone(), "u16"));
+                    }
+                    "i16" => {
+                        literal
+                            .parse::<i16>()
+                            .unwrap_or_else(|err| bad_int(err, literal.clone(), "i16"));
+                    }
+                    "u32" => {
+                        literal
+                            .parse::<u32>()
+                            .unwrap_or_else(|err| bad_int(err, literal.clone(), "u32"));
+                    }
+                    "i32" => {
+                        literal
+                            .parse::<i32>()
+                            .unwrap_or_else(|err| bad_int(err, literal.clone(), "i32"));
+                    }
+                    "u64" => {
+                        literal
+                            .parse::<u64>()
+                            .unwrap_or_else(|err| bad_int(err, literal.clone(), "u64"));
+                    }
+                    "i64" => {
+                        literal
+                            .parse::<i64>()
+                            .unwrap_or_else(|err| bad_int(err, literal.clone(), "i64"));
+                    }
+                    _ => (),
+                };
+            }
+            Node::Float(literal, size, _, _) => {
+                *size = new_type.into();
+
+                match new_type.name.as_str() {
+                    "f64" => {
+                        literal
+                            .parse::<f64>()
+                            .unwrap_or_else(|err| bad_float(err, literal.clone(), "f64"));
+                    }
+                    "f32" => {
+                        literal
+                            .parse::<f64>()
+                            .unwrap_or_else(|err| bad_float(err, literal.clone(), "f32"));
+                    }
+                    _ => (),
+                };
+            }
+            Node::Binary(binary) => {
+                self.overwrite_type(&mut binary.lhs, new_type);
+                self.overwrite_type(&mut binary.rhs, new_type);
+            }
+            Node::Unary(unary) => {
+                self.overwrite_type(&mut unary.expr, new_type);
+            }
+            Node::Logical(logical) => {
+                self.overwrite_type(&mut logical.lhs, new_type);
+                self.overwrite_type(&mut logical.rhs, new_type);
+            }
+            Node::Assign(assign) => {
+                self.overwrite_type(&mut assign.value, new_type);
+            }
+            _ => (),
         }
     }
 
@@ -328,6 +429,7 @@ impl TypeCheck {
                                 "Explicit variable type, doesn't equal the value type",
                             );
                         }
+                        self.overwrite_type(&mut decl.value, &ex_type);
                     } else if ex_type.kind == TypeKind::Float {
                         if ex_type.kind != val_type.kind {
                             error::panic_str(

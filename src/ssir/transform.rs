@@ -55,7 +55,6 @@ impl RegisterLabeler {
             TmpNode::ValueTmp(val) => {
                 let register = self.rmgr.allocate(reg::size_to_reg_size(tipe.size));
                 *label = Some(register.clone());
-                println!("Value tmp");
                 self.ref_table.insert(val.id, register);
             }
             TmpNode::BinaryTmp(binary) => {
@@ -78,6 +77,15 @@ impl RegisterLabeler {
                     let register = self.rmgr.allocate(reg::size_to_reg_size(tipe.size));
                     *label = Some(register.clone());
                     self.ref_table.insert(binary.id, register);
+                }
+            }
+            TmpNode::AssignTmp(assign) => {
+                if let TmpChild::TmpRef(ref_id, _, vlabel) = &mut assign.value {
+                    let reg = self.resolve_reg(ref_id.clone());
+                    *vlabel = Some(reg.clone());
+                    *label = Some(reg.clone());
+                } else {
+                    unreachable!()
                 }
             }
             _ => unimplemented!(),
