@@ -1,11 +1,13 @@
 extern crate lazy_static;
 
+use cli::config::Config;
 use parser::Parser;
 use ssir::{print_functions, transform::RegisterLabeler, SSir};
 use tokenizer::Tokenizer;
 use typechecker::TypeCheck;
 
 mod ast;
+mod cli;
 mod error;
 mod parser;
 mod reg;
@@ -16,6 +18,7 @@ mod typechecker;
 fn main() {
     env_logger::init();
 
+    let config = Config::new();
     let source = "
     func main {
         var x: u64 = 9238912389 + 57348738478278
@@ -27,9 +30,17 @@ fn main() {
     let mut parser = Parser::new(tokenizer, &source);
     parser.parse();
 
+    if config.get_bool("pa") {
+        println!("{:#?}", parser.declarations);
+    }
+
     let mut typecheck = TypeCheck::new();
     for decl in &mut parser.declarations {
         typecheck.check(decl);
+    }
+
+    if config.get_bool("pat") {
+        println!("{:#?}", parser.declarations);
     }
 
     let mut ssir = SSir::new();
@@ -39,5 +50,8 @@ fn main() {
 
     let mut labeler = RegisterLabeler::new();
     let functions = labeler.assign_labels(ssir.get_functions());
-    print_functions(&functions);
+
+    if config.get_bool("ssir") {
+        print_functions(&functions);
+    }
 }
