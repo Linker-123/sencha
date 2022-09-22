@@ -52,6 +52,7 @@ impl RegisterLabeler {
         tipe: &TaggedType,
         label: &mut Option<RegisterLabel>,
     ) {
+        println!("node: {:#?}", node);
         match node {
             TmpNode::ValueTmp(val) => {
                 let register = self.rmgr.allocate(reg::size_to_reg_size(tipe.size));
@@ -100,7 +101,9 @@ impl RegisterLabeler {
                     *label = Some(reg.clone());
                     self.ref_table.insert(assign.id, reg);
                 } else {
-                    unreachable!()
+                    let reg = self.rmgr.allocate(reg::size_to_reg_size(tipe.size));
+                    *label = Some(reg.clone());
+                    self.ref_table.insert(assign.id, reg);
                 }
             }
             TmpNode::GroupingTmp(grouping) => {

@@ -28,9 +28,8 @@ fn main() {
 
     let source = "
     func main {
-        x := 5;
-        if (x = 10 + 5) == 10 {
-        }
+        z := 10;
+        x := (z = 6) * 3
     }
     "
     .to_string();
