@@ -4,7 +4,7 @@ use crate::{
     typechecker::TaggedType,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TmpChild {
     Literal(String, TaggedType),
     LoadVar(String, TaggedType),

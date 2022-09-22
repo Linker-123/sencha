@@ -425,15 +425,11 @@ impl SSir {
                     )));
                     return TmpChild::None;
                 } else {
-                    let id = self.get_tmp_id();
-                    let gtmp = GroupingTmp::new(expr, ttype.clone(), id);
-                    self.add_ins(Instruction::TmpNode(
-                        TmpNode::GroupingTmp(gtmp),
-                        ttype.clone(),
-                        None,
-                    ));
-
-                    return TmpChild::TmpRef(id, ttype, None);
+                    if let TmpChild::TmpRef(ref_id, _, _) = expr {
+                        return TmpChild::TmpRef(ref_id, ttype, None);
+                    } else {
+                        return expr;
+                    }
                 }
             }
             _ => {
