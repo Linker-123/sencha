@@ -2,6 +2,7 @@ extern crate lazy_static;
 
 use cli::config::Config;
 use parser::Parser;
+use reg::RegisterManager;
 use ssir::{print_functions, transform::RegisterLabeler, SSir};
 use tokenizer::Tokenizer;
 use typechecker::TypeCheck;
@@ -19,10 +20,16 @@ fn main() {
     env_logger::init();
 
     let config = Config::new();
+    if config.get_bool("rt") {
+        let registers = RegisterManager::new();
+        registers.table(None);
+        return;
+    }
+
     let source = "
     func main {
-        var x: u64 = 9238912389 + 57348738478278
-        var y: u64 = x + x
+        if 5 == 5 {
+        }
     }
     "
     .to_string();
@@ -44,7 +51,7 @@ fn main() {
     }
 
     let mut ssir = SSir::new();
-    ssir.generate(&parser.declarations);
+    ssir.generate(&mut parser.declarations);
 
     drop(parser);
 

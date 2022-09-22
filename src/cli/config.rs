@@ -22,6 +22,9 @@ impl Config {
         config
             .value_options
             .insert("ssir".to_string(), "false".to_string());
+        config
+            .value_options
+            .insert("rt".to_string(), "false".to_string());
 
         let options = parse_options();
         for option in options {

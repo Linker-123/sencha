@@ -19,9 +19,9 @@ impl std::fmt::Display for TmpChild {
             Self::LoadVar(var, tipe) => write!(f, "LOAD {}{{{}}}", tipe, var),
             Self::TmpRef(tmp, tipe, label) => {
                 if let Some(l) = label {
-                    write!(f, "{} -> REF {}{{tmp{}}}", l, tipe, tmp)
+                    write!(f, "{} -> {}{{tmp{}}}", l, tipe, tmp)
                 } else {
-                    write!(f, "REF {}{{tmp{}}}", tipe, tmp)
+                    write!(f, "{}{{tmp{}}}", tipe, tmp)
                 }
             }
             Self::None => unreachable!(),

@@ -135,8 +135,8 @@ impl RegisterManager {
         registers.push(Register::new(RegisterLabel::Rbx, RegisterSize::Qword));
         registers.push(Register::new(RegisterLabel::Rcx, RegisterSize::Qword));
         registers.push(Register::new(RegisterLabel::Rdx, RegisterSize::Qword));
-        registers.push(Register::new(RegisterLabel::Rsi, RegisterSize::Qword));
         registers.push(Register::new(RegisterLabel::Rdi, RegisterSize::Qword));
+        registers.push(Register::new(RegisterLabel::Rsi, RegisterSize::Qword));
         registers.push(Register::new(RegisterLabel::Rbp, RegisterSize::Qword));
         registers.push(Register::new(RegisterLabel::Rsp, RegisterSize::Qword));
         registers.push(Register::new(RegisterLabel::R8, RegisterSize::Qword));
@@ -242,6 +242,7 @@ impl RegisterManager {
     #[allow(dead_code)]
     pub fn table(&self, size: Option<RegisterSize>) {
         println!("| {: <10} | {: <10} | {: <6}|", "Label:", "Size:", "Used:");
+
         for reg in &self.registers {
             if let Some(s) = &size {
                 if reg.size != *s {

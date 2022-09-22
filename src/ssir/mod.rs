@@ -11,6 +11,7 @@ use self::{
 };
 
 mod ins;
+mod reveng;
 mod tmp;
 pub mod transform;
 mod var_table;
@@ -29,11 +30,8 @@ fn print_instruction(ins: &Instruction) {
         Instruction::VarAssign(name, id, tipe) => {
             println!("\t{}{{{}}} = {}", tipe, name, id);
         }
-        Instruction::IfNot(cond, ealse) => {
-            println!("\tif not {}", cond);
-            if *ealse != 0 {
-                println!("\tjump LC{}", ealse);
-            }
+        Instruction::If(cond) => {
+            println!("\tif {}", cond);
             println!("\telse");
         }
     }
@@ -134,7 +132,7 @@ impl SSir {
         }
     }
 
-    pub fn generate(&mut self, decls: &Vec<Box<Node>>) {
+    pub fn generate(&mut self, decls: &mut Vec<Box<Node>>) {
         for decl in decls {
             self.process_node(decl);
         }
@@ -180,26 +178,26 @@ impl SSir {
         self.tmp_count
     }
 
-    fn process_node(&mut self, node: &Box<Node>) -> TmpChild {
-        match &**node {
+    fn process_node(&mut self, node: &mut Box<Node>) -> TmpChild {
+        match &mut **node {
             // Statements
             Node::Function(fun) => {
                 self.add_func(fun.name.clone());
-                self.process_node(&fun.body);
+                self.process_node(&mut fun.body);
                 self.end_func();
 
                 TmpChild::None
             }
             Node::Block(bl) => {
                 self.variables.add_scope();
-                for stmt in &bl.statements {
+                for stmt in &mut bl.statements {
                     self.process_node(stmt);
                 }
                 self.variables.end_scope();
                 TmpChild::None
             }
             Node::VarDecl(vd) => {
-                let tmp = self.process_node(&vd.value);
+                let tmp = self.process_node(&mut vd.value);
                 self.add_ins(Instruction::VarDecl(vd.name.clone(), tmp, vd.dtype.clone()));
                 self.variables
                     .add_var(Variable::new(vd.name.clone(), vd.dtype.clone()));
@@ -208,23 +206,24 @@ impl SSir {
                 TmpChild::None
             }
             Node::ExprStmt(es) => {
-                self.process_node(&es.expr);
+                self.process_node(&mut es.expr);
                 self.add_ins(Instruction::Pop);
 
                 TmpChild::None
             }
             Node::If(ief) => {
-                let cond = self.process_node(&ief.condition);
+                reveng::reverse_binary(&mut ief.condition);
+                let cond = self.process_node(&mut ief.condition);
 
-                let mut else_loc: usize = 0;
-                if let Some(_) = &ief.else_block {
-                    else_loc = self.label_count + 1;
-                }
+                // let mut else_loc: usize = 0;
+                // if let Some(_) = &ief.else_block {
+                // else_loc = self.label_count + 1;
+                // }
 
-                self.add_ins(Instruction::IfNot(cond, else_loc));
-                self.process_node(&ief.then_block);
+                self.add_ins(Instruction::If(cond));
+                self.process_node(&mut ief.then_block);
 
-                if let Some(els) = &ief.else_block {
+                if let Some(els) = &mut ief.else_block {
                     self.add_label();
                     self.process_node(els);
                     self.end_label();
@@ -234,8 +233,8 @@ impl SSir {
                 TmpChild::None
             }
             Node::Binary(bi) => {
-                let lhs = self.process_node(&bi.lhs);
-                let rhs = self.process_node(&bi.rhs);
+                let lhs = self.process_node(&mut bi.lhs);
+                let rhs = self.process_node(&mut bi.rhs);
 
                 let lhs_type = get_child_type(&lhs);
                 let res_type = match bi.op {
@@ -276,7 +275,7 @@ impl SSir {
             }
             Node::Unary(un) => {
                 let id = self.get_tmp_id();
-                let value = self.process_node(&un.expr);
+                let value = self.process_node(&mut un.expr);
                 let ttype = get_child_type(&value);
                 let utmp = UnaryTmp::new(value, un.op.clone(), id);
                 self.add_ins(Instruction::TmpNode(
@@ -289,8 +288,8 @@ impl SSir {
             }
             Node::Logical(lg) => {
                 let id = self.get_tmp_id();
-                let lhs = self.process_node(&lg.lhs);
-                let rhs = self.process_node(&lg.rhs);
+                let lhs = self.process_node(&mut lg.lhs);
+                let rhs = self.process_node(&mut lg.rhs);
                 let ttype = get_child_type(&lhs);
                 let ltmp = LogicalTmp::new(lhs, rhs, lg.op.clone(), id);
                 self.add_ins(Instruction::TmpNode(
@@ -303,7 +302,7 @@ impl SSir {
             }
             Node::Assign(asi) => {
                 let id = self.get_tmp_id();
-                let value = self.process_node(&asi.value);
+                let value = self.process_node(&mut asi.value);
                 let ttype = get_child_type(&value);
                 let atmp = AssignTmp::new(value, id);
 
