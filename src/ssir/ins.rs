@@ -7,7 +7,7 @@ pub enum Instruction {
     TmpNode(TmpNode, TaggedType, Option<RegisterLabel>),
     VarDecl(String, TmpChild, TaggedType),
     VarAssign(String, TmpChild, TaggedType),
-    If(TmpChild),
+    If(TmpNode),
     Pop,
 }
 

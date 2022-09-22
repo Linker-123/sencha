@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use crate::{
-    reg::{self, RegisterLabel, RegisterManager},
+    ast::BinaryOp,
+    reg::{self, RegisterLabel, RegisterManager, RegisterSize},
     ssir::ins::Instruction,
     typechecker::TaggedType,
 };
@@ -58,6 +59,19 @@ impl RegisterLabeler {
                 self.ref_table.insert(val.id, register);
             }
             TmpNode::BinaryTmp(binary) => {
+                match binary.op {
+                    BinaryOp::Equal
+                    | BinaryOp::Greater
+                    | BinaryOp::GreaterEq
+                    | BinaryOp::NotEqual
+                    | BinaryOp::Less
+                    | BinaryOp::LessEq => {
+                        *label = Some(self.rmgr.allocate(RegisterSize::Byte));
+                        return;
+                    }
+                    _ => (),
+                };
+
                 let mut tmp_ref = false;
                 if let TmpChild::TmpRef(ref_id, _, llabel) = &mut binary.lhs {
                     let reg = self.resolve_reg(ref_id.clone());
@@ -84,8 +98,17 @@ impl RegisterLabeler {
                     let reg = self.resolve_reg(ref_id.clone());
                     *vlabel = Some(reg.clone());
                     *label = Some(reg.clone());
+                    self.ref_table.insert(assign.id, reg);
                 } else {
                     unreachable!()
+                }
+            }
+            TmpNode::GroupingTmp(grouping) => {
+                if let TmpChild::TmpRef(ref_id, _, llabel) = &mut grouping.expr {
+                    let reg = self.resolve_reg(ref_id.clone());
+                    *label = Some(reg.clone());
+                    *llabel = Some(reg.clone());
+                    self.ref_table.insert(grouping.id, reg);
                 }
             }
             _ => unimplemented!(),

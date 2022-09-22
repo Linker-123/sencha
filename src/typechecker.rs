@@ -492,6 +492,7 @@ impl TypeCheck {
                     }
                 } else {
                     if val_type != local {
+                        println!("Val type {:#?} local {:#?}", val_type, local);
                         error::panic_str("Original variable type, doesn't equal the value type");
                     }
                 }
@@ -534,6 +535,7 @@ impl TypeCheck {
                 self.resolve_type(&"void".to_string())
             }
             Node::GetPtr(_) => self.resolve_type(&"ptr".to_string()),
+            Node::Grouping(grouping) => self.check(&mut grouping.expr),
             _ => todo!(),
         }
     }

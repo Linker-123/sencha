@@ -28,7 +28,8 @@ fn main() {
 
     let source = "
     func main {
-        if 5 == 5 {
+        x := 5;
+        if (x = 10 + 5) == 10 {
         }
     }
     "

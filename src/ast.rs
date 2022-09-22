@@ -31,7 +31,7 @@ pub enum Node {
     Function(Function),
     // Call(Call),
     VarDecl(VarDecl),
-    // Grouping(Grouping),
+    Grouping(Grouping),
     Unary(Unary),
     Logical(Logical),
     Assign(Assign),
@@ -189,16 +189,16 @@ impl VarDecl {
     }
 }
 
-// #[derive(Debug)]
-// pub struct Grouping {
-//     pub expr: Box<Node>,
-// }
+#[derive(Debug)]
+pub struct Grouping {
+    pub expr: Box<Node>,
+}
 
-// impl Grouping {
-//     pub fn new(expr: Box<Node>) -> Box<Node> {
-//         Box::new(Node::Grouping(Grouping { expr }))
-//     }
-// }
+impl Grouping {
+    pub fn new(expr: Box<Node>) -> Box<Node> {
+        Box::new(Node::Grouping(Grouping { expr }))
+    }
+}
 
 #[derive(Debug)]
 pub struct Unary {

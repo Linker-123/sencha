@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Assign, Binary, BinaryOp, Block, ExprStmt, For, Function, FunctionArg, GetPtr, If, Logical,
-        LogicalOp, Node, Ret, Unary, UnaryOp, VarDecl,
+        Assign, Binary, BinaryOp, Block, ExprStmt, For, Function, FunctionArg, GetPtr, Grouping,
+        If, Logical, LogicalOp, Node, Ret, Unary, UnaryOp, VarDecl,
     },
     tokenizer::{get_tok_len, get_tok_loc, TokenKind, Tokenizer},
 };
@@ -606,6 +606,17 @@ impl<'a> Parser<'a> {
             }
             TokenKind::IdenLiteral(ident, line, column) => {
                 Node::VarGet(ident.clone(), line, column)
+            }
+            TokenKind::LeftParen(_, _) => {
+                self.advance();
+                let expr = self.expr()?;
+                consume!(
+                    self,
+                    "Expected a ')'",
+                    self.current,
+                    TokenKind::RightParen(_, _)
+                );
+                return Ok(Grouping::new(expr));
             }
             TokenKind::LeftBrace(line, column) => match self.ctx {
                 ParserContext::ArrayParse(size) => {

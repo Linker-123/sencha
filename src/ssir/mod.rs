@@ -6,7 +6,7 @@ use crate::{
 
 use self::{
     ins::{Function, Instruction, Label},
-    tmp::{AssignTmp, BinaryTmp, LogicalTmp, TmpChild, TmpNode, UnaryTmp, ValueTmp},
+    tmp::{AssignTmp, BinaryTmp, GroupingTmp, LogicalTmp, TmpChild, TmpNode, UnaryTmp, ValueTmp},
     var_table::{VarTable, Variable},
 };
 
@@ -19,7 +19,7 @@ mod var_table;
 fn print_instruction(ins: &Instruction) {
     match ins {
         Instruction::TmpNode(node, tipe, label) => {
-            print_node(node, tipe, label);
+            print_node(node, Some(tipe), label);
         }
         Instruction::VarDecl(name, node, size) => {
             println!("\t{}{{{}}} := {}", size, name, node);
@@ -31,57 +31,90 @@ fn print_instruction(ins: &Instruction) {
             println!("\t{}{{{}}} = {}", tipe, name, id);
         }
         Instruction::If(cond) => {
-            println!("\tif {}", cond);
+            print!("\tif ");
+            print_node(cond, None, &None);
             println!("\telse");
         }
     }
 }
 
-fn print_node(node: &TmpNode, tipe: &TaggedType, label: &Option<RegisterLabel>) {
+fn print_node(node: &TmpNode, tipe: Option<&TaggedType>, label: &Option<RegisterLabel>) {
     match node {
-        TmpNode::ValueTmp(value) => println!(
-            "\t{} -> {}{{tmp{}}} = {}",
-            label.as_ref().unwrap(),
-            tipe,
-            value.id,
-            value.value
-        ),
-        TmpNode::BinaryTmp(binary) => println!(
-            "\t{} -> {}{{tmp{}}} = {} {} {}",
-            label.as_ref().unwrap(),
-            tipe,
-            binary.id,
-            binary.lhs,
-            binary.op,
-            binary.rhs
-        ),
-        TmpNode::LogicalTmp(logical) => println!(
-            "\t{} -> {}{{tmp{}}} = {} {} {}",
-            label.as_ref().unwrap(),
-            tipe,
-            logical.id,
-            logical.lhs,
-            logical.op,
-            logical.rhs
-        ),
+        TmpNode::ValueTmp(value) => {
+            if let Some(tipe) = tipe {
+                println!(
+                    "\t{} -> {}{{tmp{}}} = {}",
+                    label.as_ref().unwrap(),
+                    tipe,
+                    value.id,
+                    value.value
+                )
+            } else {
+                println!("{}", value.value);
+            }
+        }
+        TmpNode::BinaryTmp(binary) => {
+            if let Some(tipe) = tipe {
+                println!(
+                    "\t{} -> {}{{tmp{}}} = {} {} {}",
+                    label.as_ref().unwrap(),
+                    tipe,
+                    binary.id,
+                    binary.lhs,
+                    binary.op,
+                    binary.rhs
+                )
+            } else {
+                println!("{} {} {}", binary.lhs, binary.op, binary.rhs);
+            }
+        }
+        TmpNode::LogicalTmp(logical) => {
+            if let Some(tipe) = tipe {
+                println!(
+                    "\t{} -> {}{{tmp{}}} = {} {} {}",
+                    label.as_ref().unwrap(),
+                    tipe,
+                    logical.id,
+                    logical.lhs,
+                    logical.op,
+                    logical.rhs
+                )
+            } else {
+                println!("{} {} {}", logical.lhs, logical.op, logical.rhs);
+            }
+        }
         TmpNode::UnaryTmp(unary) => {
-            println!(
-                "\t{} -> {}{{tmp{}}} = {} {}",
-                label.as_ref().unwrap(),
-                tipe,
-                unary.id,
-                unary.op,
-                unary.value
-            )
+            if let Some(tipe) = tipe {
+                println!(
+                    "\t{} -> {}{{tmp{}}} = {} {}",
+                    label.as_ref().unwrap(),
+                    tipe,
+                    unary.id,
+                    unary.op,
+                    unary.value
+                )
+            } else {
+                println!("{} {}", unary.op, unary.value);
+            }
         }
         TmpNode::AssignTmp(assign) => {
+            if let Some(tipe) = tipe {
+                println!(
+                    "\t{} -> {}{{tmp{}}} = {}",
+                    label.as_ref().unwrap(),
+                    tipe,
+                    assign.id,
+                    assign.value
+                );
+            } else {
+                println!("{}", assign.value);
+            }
+        }
+        TmpNode::GroupingTmp(grouping) => {
             println!(
-                "\t{} -> {}{{tmp{}}} = {}",
-                label.as_ref().unwrap(),
-                tipe,
-                assign.id,
-                assign.value
-            )
+                "\t{}{{tmp{}}} = ({})",
+                grouping.tipe, grouping.id, grouping.expr
+            );
         }
     }
 }
@@ -118,17 +151,21 @@ pub struct SSir {
     label: Option<Label>,
     label_count: usize,
     variables: VarTable,
+    is_condition: bool,
+    condition_node: Option<TmpNode>,
 }
 
 impl SSir {
     pub fn new() -> SSir {
         SSir {
-            tmp_count: 0,
+            tmp_count: 1,
             functions: Vec::new(),
             func: None,
             label: None,
             label_count: 0,
             variables: VarTable::new(),
+            is_condition: false,
+            condition_node: None,
         }
     }
 
@@ -213,14 +250,16 @@ impl SSir {
             }
             Node::If(ief) => {
                 reveng::reverse_binary(&mut ief.condition);
-                let cond = self.process_node(&mut ief.condition);
+                self.is_condition = true;
+                self.process_node(&mut ief.condition);
 
                 // let mut else_loc: usize = 0;
                 // if let Some(_) = &ief.else_block {
                 // else_loc = self.label_count + 1;
                 // }
 
-                self.add_ins(Instruction::If(cond));
+                let cond_node = self.condition_node.take();
+                self.add_ins(Instruction::If(cond_node.unwrap()));
                 self.process_node(&mut ief.then_block);
 
                 if let Some(els) = &mut ief.else_block {
@@ -233,6 +272,11 @@ impl SSir {
                 TmpChild::None
             }
             Node::Binary(bi) => {
+                let is_condition = self.is_condition;
+                if is_condition {
+                    self.is_condition = false;
+                }
+
                 let lhs = self.process_node(&mut bi.lhs);
                 let rhs = self.process_node(&mut bi.rhs);
 
@@ -244,20 +288,31 @@ impl SSir {
                     _ => TaggedType::new(1, TypeKind::Bool, None),
                 };
 
-                let id = self.get_tmp_id();
-                self.add_ins(Instruction::TmpNode(
-                    TmpNode::BinaryTmp(BinaryTmp::new(
+                if is_condition {
+                    self.condition_node = Some(TmpNode::BinaryTmp(BinaryTmp::new(
                         lhs,
                         rhs,
                         bi.op.clone(),
-                        id,
+                        0,
                         lhs_type.clone(),
-                    )),
-                    res_type.clone(),
-                    None,
-                ));
+                    )));
+                    return TmpChild::None;
+                } else {
+                    let id = self.get_tmp_id();
+                    self.add_ins(Instruction::TmpNode(
+                        TmpNode::BinaryTmp(BinaryTmp::new(
+                            lhs,
+                            rhs,
+                            bi.op.clone(),
+                            id,
+                            lhs_type.clone(),
+                        )),
+                        res_type.clone(),
+                        None,
+                    ));
 
-                return TmpChild::TmpRef(id, res_type.clone(), None);
+                    return TmpChild::TmpRef(id, res_type.clone(), None);
+                }
             }
             Node::VarGet(name, _, _) => {
                 let id = self.get_tmp_id();
@@ -274,36 +329,67 @@ impl SSir {
                 return TmpChild::TmpRef(id, var.tagged_type.clone(), None);
             }
             Node::Unary(un) => {
-                let id = self.get_tmp_id();
+                let is_condition = self.is_condition;
+                if is_condition {
+                    self.is_condition = false;
+                }
+
                 let value = self.process_node(&mut un.expr);
                 let ttype = get_child_type(&value);
-                let utmp = UnaryTmp::new(value, un.op.clone(), id);
-                self.add_ins(Instruction::TmpNode(
-                    TmpNode::UnaryTmp(utmp),
-                    ttype.clone(),
-                    None,
-                ));
+                if is_condition {
+                    let utmp = UnaryTmp::new(value, un.op.clone(), 0);
+                    self.condition_node = Some(TmpNode::UnaryTmp(utmp));
 
-                return TmpChild::TmpRef(id, ttype, None);
+                    return TmpChild::None;
+                } else {
+                    let id = self.get_tmp_id();
+                    let utmp = UnaryTmp::new(value, un.op.clone(), id);
+                    self.add_ins(Instruction::TmpNode(
+                        TmpNode::UnaryTmp(utmp),
+                        ttype.clone(),
+                        None,
+                    ));
+
+                    return TmpChild::TmpRef(id, ttype, None);
+                }
             }
             Node::Logical(lg) => {
-                let id = self.get_tmp_id();
+                let is_condition = self.is_condition;
+                if is_condition {
+                    self.is_condition = false;
+                }
+
                 let lhs = self.process_node(&mut lg.lhs);
                 let rhs = self.process_node(&mut lg.rhs);
                 let ttype = get_child_type(&lhs);
-                let ltmp = LogicalTmp::new(lhs, rhs, lg.op.clone(), id);
-                self.add_ins(Instruction::TmpNode(
-                    TmpNode::LogicalTmp(ltmp),
-                    ttype.clone(),
-                    None,
-                ));
 
-                return TmpChild::TmpRef(id, ttype, None);
+                if is_condition {
+                    let ltmp = LogicalTmp::new(lhs, rhs, lg.op.clone(), 0);
+                    self.condition_node = Some(TmpNode::LogicalTmp(ltmp));
+
+                    return TmpChild::None;
+                } else {
+                    let id = self.get_tmp_id();
+                    let ltmp = LogicalTmp::new(lhs, rhs, lg.op.clone(), id);
+                    self.add_ins(Instruction::TmpNode(
+                        TmpNode::LogicalTmp(ltmp),
+                        ttype.clone(),
+                        None,
+                    ));
+
+                    return TmpChild::TmpRef(id, ttype, None);
+                }
             }
             Node::Assign(asi) => {
-                let id = self.get_tmp_id();
+                let is_condition = self.is_condition;
+                if is_condition {
+                    self.is_condition = false;
+                }
+
                 let value = self.process_node(&mut asi.value);
                 let ttype = get_child_type(&value);
+
+                let id = self.get_tmp_id();
                 let atmp = AssignTmp::new(value, id);
 
                 self.add_ins(Instruction::TmpNode(
@@ -322,6 +408,34 @@ impl SSir {
             Node::Number(n, size, _, _) => TmpChild::Literal(n.clone(), size.clone()),
             Node::Float(f, size, _, _) => TmpChild::Literal(f.clone(), size.clone()),
             Node::BoolLiteral(b, size, _, _) => TmpChild::Literal(b.to_string(), size.clone()),
+            Node::Grouping(grouping) => {
+                let is_condition = self.is_condition;
+                if is_condition {
+                    self.is_condition = false;
+                }
+
+                let expr = self.process_node(&mut grouping.expr);
+                let ttype = get_child_type(&expr);
+
+                if is_condition {
+                    self.condition_node = Some(TmpNode::GroupingTmp(GroupingTmp::new(
+                        expr,
+                        ttype.clone(),
+                        0,
+                    )));
+                    return TmpChild::None;
+                } else {
+                    let id = self.get_tmp_id();
+                    let gtmp = GroupingTmp::new(expr, ttype.clone(), id);
+                    self.add_ins(Instruction::TmpNode(
+                        TmpNode::GroupingTmp(gtmp),
+                        ttype.clone(),
+                        None,
+                    ));
+
+                    return TmpChild::TmpRef(id, ttype, None);
+                }
+            }
             _ => {
                 println!("{:#?}", node);
                 unimplemented!()

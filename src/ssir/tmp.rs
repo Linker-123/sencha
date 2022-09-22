@@ -36,6 +36,7 @@ pub enum TmpNode {
     UnaryTmp(UnaryTmp),
     LogicalTmp(LogicalTmp),
     AssignTmp(AssignTmp),
+    GroupingTmp(GroupingTmp),
 }
 
 #[derive(Debug)]
@@ -113,5 +114,18 @@ pub struct AssignTmp {
 impl AssignTmp {
     pub fn new(value: TmpChild, id: usize) -> AssignTmp {
         AssignTmp { value, id }
+    }
+}
+
+#[derive(Debug)]
+pub struct GroupingTmp {
+    pub expr: TmpChild,
+    pub id: usize,
+    pub tipe: TaggedType,
+}
+
+impl GroupingTmp {
+    pub fn new(expr: TmpChild, tipe: TaggedType, id: usize) -> GroupingTmp {
+        GroupingTmp { expr, id, tipe }
     }
 }
