@@ -33,7 +33,9 @@ fn print_instruction(ins: &Instruction) {
         Instruction::If(cond) => {
             print!("\tif ");
             print_node(cond, None, &None);
-            println!("\telse");
+        }
+        Instruction::Jump(lc) => {
+            println!("\tjump LC{}", lc);
         }
     }
 }
@@ -183,6 +185,10 @@ impl SSir {
         self.func = Some(Function::new(name));
     }
 
+    fn swap_label(&mut self, label_count: usize) {
+        self.label = Some(Label::new(label_count))
+    }
+
     fn add_label(&mut self) {
         self.label_count += 1;
         self.label = Some(Label::new(self.label_count));
@@ -196,7 +202,7 @@ impl SSir {
         if let Some(f) = &mut self.func {
             f.labels.push(self.label.take().unwrap());
         } else {
-            panic!("Not compile a function.");
+            panic!("Not compiling a function.");
         }
     }
 
@@ -221,6 +227,7 @@ impl SSir {
             Node::Function(fun) => {
                 self.add_func(fun.name.clone());
                 self.process_node(&mut fun.body);
+                self.end_label();
                 self.end_func();
 
                 TmpChild::None
@@ -260,13 +267,25 @@ impl SSir {
 
                 let cond_node = self.condition_node.take();
                 self.add_ins(Instruction::If(cond_node.unwrap()));
-                self.process_node(&mut ief.then_block);
-
-                if let Some(els) = &mut ief.else_block {
-                    self.add_label();
-                    self.process_node(els);
-                    self.end_label();
+                if let Some(ealse) = &mut ief.else_block {
+                    self.process_node(ealse);
                 }
+
+                let reserved = self.label_count + 2;
+                self.add_ins(Instruction::Jump(reserved));
+                self.add_label();
+
+                self.process_node(&mut ief.then_block);
+                self.add_ins(Instruction::Jump(reserved));
+                self.end_label();
+
+                self.swap_label(reserved);
+                
+                // if let Some(els) = &mut ief.else_block {
+                //     self.add_label();
+                //     self.process_node(els);
+                //     self.end_label();
+                // }
 
                 self.add_ins(Instruction::Pop);
                 TmpChild::None

@@ -8,6 +8,7 @@ pub enum Instruction {
     VarDecl(String, TmpChild, TaggedType),
     VarAssign(String, TmpChild, TaggedType),
     If(TmpNode),
+    Jump(usize),
     Pop,
 }
 

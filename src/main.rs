@@ -28,8 +28,13 @@ fn main() {
 
     let source = "
     func main {
-        z := 10;
-        x := (z = 6) * 3
+        z := 111;
+
+        if z == 222 {
+            z = 333;
+        } else {
+            z = 444;
+        }
     }
     "
     .to_string();

@@ -38,6 +38,19 @@ impl RegisterLabeler {
                     _ => {}
                 }
             }
+            for label in &mut func.labels {
+                for ins in &mut label.instructions {
+                    match ins {
+                        Instruction::TmpNode(node, tipe, label) => {
+                            self.process_ins(node, tipe, label);
+                        }
+                        Instruction::Pop => {
+                            self.rmgr.deallocate_all();
+                        }
+                        _ => {}
+                    }
+                }
+            }
         }
         functions
     }
@@ -52,7 +65,6 @@ impl RegisterLabeler {
         tipe: &TaggedType,
         label: &mut Option<RegisterLabel>,
     ) {
-        println!("node: {:#?}", node);
         match node {
             TmpNode::ValueTmp(val) => {
                 let register = self.rmgr.allocate(reg::size_to_reg_size(tipe.size));
